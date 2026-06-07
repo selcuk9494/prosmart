@@ -52,8 +52,12 @@ server/node_modules/
 
 # Large legacy/backup binaries (do not version)
 NBOS/**
+!NBOS/yetki/
 !NBOS/yetki/CrmMenu.xml
+!NBOS/images/
+!NBOS/images/img/
 !NBOS/images/img/user_login.jpg
+!NBOS/images/pic/
 !NBOS/images/pic/login_back.gif
 !NBOS/images/pic/welcomedolu.png
 

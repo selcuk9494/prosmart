@@ -1,0 +1,1312 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<items>
+  <!-- KİŞİLER -->
+  <item name="Kişiler">
+    <subitem name="Adres Defteri" type="par">
+      <menu name="Yeni Kişi" ref="insert_kisi" type="sub">
+        <options name="Kaydetme" id="89"/>
+        <options name="Görüntüleme" id="90"/>
+        <options name="Güncelleme" id="91"/>
+        <options name="Silme" id="92"/>
+        <options name="Giriş" id="10001"/>
+        <options name="Excele Atma Yetkisi" id="20194"/>
+
+      </menu>
+      <menu name="Kisi Aciklama" ref="Kisi_Aciklama" type="sub">
+        <options name="Kaydetme" id="10312"/>
+      </menu>
+      <menu name="Kişi Ara" ref="find_kisi" type="sub">
+        <options name="Giriş" id="10002"/>
+      </menu>
+      <menu name="Yeni Firma" ref="insert_firma" type="sub">
+        <options name="Kaydetme" id="41"/>
+        <options name="Görüntüleme" id="42"/>
+        <options name="Güncelleme" id="43"/>
+        <options name="Silme" id="44"/>
+        <options name="Giriş" id="10003"/>
+      </menu>
+      <menu name="Firma Ara" ref="find_firma" type="sub">
+        <options name="Giriş" id="10004"/>
+      </menu>
+      <menu name="Yeni Fırsat Firma" ref="insert_firsat_firma" type="sub">
+        <options name="Kaydetme" id="195"/>
+        <options name="Görüntüleme" id="196"/>
+        <options name="Güncelleme" id="197"/>
+        <options name="Silme" id="198"/>
+        <options name="Giriş" id="10005"/>
+      </menu>
+    </subitem>
+    <subitem name="Görev Yönetimi" type="par">
+      <menu name="Yeni Görev" ref="insert_gorev" type="sub">
+        <options name="Kaydetme" id="57"/>
+        <options name="Görüntüleme" id="58"/>
+        <options name="Güncelleme" id="59"/>
+        <options name="Silme" id="60"/>
+        <options name="Giriş" id="10006"/>
+        <options name="Duyuru" id="20193"/>
+      </menu>
+      <menu name="Görev Ara" ref="find_gorev" type="sub">
+        <options name="Giriş" id="10007"/>
+      </menu>
+    </subitem>
+    <subitem name="Randevu Yönetimi" type="par">
+      <menu name="Yeni Randevu" ref="insert_randevu" type="sub">
+        <options name="Kaydetme" id="1525"/>
+        <options name="Görüntüleme(İlgili Personel)" id="1526"/>
+        <options name="Görüntüleme(Tüm Personel)" id="1527"/>
+        <options name="Güncelleme" id="1528"/>
+        <options name="Silme" id="1529"/>
+        <options name="Giriş" id="10008"/>
+      </menu>
+      <menu name="Randevu Ara" ref="list_randevu" type="sub">
+        <options name="Giriş" id="10009"/>
+      </menu>
+    </subitem>
+  </item>
+
+  <!-- OMNI -->
+  <item name="Hareket İşlemleri">
+    <menu name="Fatura" ref="insert_irsaliye_fatura" type="par">
+      <options name="Fatura Silme" id="50910"/>
+    </menu>
+    <menu name="Fatura Arama" ref="fatura_irsaliyeler" type="par">
+      <options name="İrsaliyeyi Faturaya Dönüştürme" id="70265"/>
+    </menu>
+    <menu name="Malzeme Transfer Fişleri" ref="insert_irsaliye_fatura" type="par">
+      <options name="Transfer Fişi Silme" id="50911"/>
+    </menu>
+  </item >
+
+  <!-- ÇAĞRI MERKEZİ -->
+  <item name="Çağrı Merkezi">
+    <menu name="Gelen Çağrı" ref="insert_cagri" type="par">
+      <options name="Kaydetme" id="37"/>
+      <options name="Görüntüleme" id="38"/>
+      <options name="Güncelleme" id="39"/>
+      <options name="Silme" id="40"/>
+      <options name="Giriş" id="10021"/>
+    </menu>
+    <menu name="Giden Çağrı" ref="insert_giden_cagri" type="par">
+      <options name="Kaydetme" id="53"/>
+      <options name="Görüntüleme" id="54"/>
+      <options name="Güncelleme" id="55"/>
+      <options name="Silme" id="56"/>
+      <options name="Giriş" id="10022"/>
+    </menu>
+    <menu name="Çağrı Ara" ref="find_cagri" type="par">
+      <options name="Giriş" id="10023"/>
+    </menu>
+    <menu name="Gelen Gönderi" ref="gelen_evrak" type="par">
+      <options name="Kaydetme" id="6000"/>
+      <options name="Görüntüleme" id="6001"/>
+      <options name="Güncelleme" id="6002"/>
+      <options name="Silme" id="6003"/>
+      <options name="Giriş" id="10024"/>
+    </menu>
+    <menu name="Giden Gönderi" ref="giden_evrak" type="par">
+      <options name="Kaydetme" id="6004"/>
+      <options name="Görüntüleme" id="6005"/>
+      <options name="Güncelleme" id="6006"/>
+      <options name="Silme" id="6007"/>
+      <options name="Giriş" id="10025"/>
+    </menu>
+    <menu name="Gönderi Ara" ref="find_evrak" type="par">
+      <options name="Giriş" id="10026"/>
+    </menu>
+    <menu name="E-Mail Gönder" ref="SendMail" type="par">
+      <options name="Giriş" id="10027"/>
+    </menu>
+    <menu name="Toplu E-Mail Gönder" ref="toplu_mail_gonder" type="par">
+      <options name="Giriş" id="10028"/>
+      <options name="Gönder" id="177"/>
+    </menu>
+    <menu name="Döviz Kuru İşlemleri" ref="insert_doviz_kuru" type="par">
+      <options name="Kaydetme" id="199"/>
+      <options name="Giriş" id="10029"/>
+    </menu>
+  </item>
+
+  <!-- SATIŞ PAZARLAMA -->
+  <item name="Satış Pazarlama">
+    <subitem name="Teklif Yönetimi" type="par">
+      <menu name="Yeni Ürün Teklifi" ref="insert_teklif" type="sub">
+        <options name="Kaydetme" id="1008"/>
+        <options name="Görüntüleme" id="1009"/>
+        <options name="Onaylama" id="1010"/>
+        <options name="Silme" id="1011"/>
+        <options name="Birim Fiyat Güncelleme" id="9509"/>
+        <options name="Teklif Tarih Güncelle" id="10212"/>
+        <options name="Giriş" id="10041"/>
+        <options name="İndirim Oranı" id="20041"/>
+        <options name="Teklife Yasaklı Ürün Ekleme" id="20042"/>
+      </menu>
+
+
+
+      <menu name="Onay Bekleyen Teklifler" ref="teklif_onizleme_listesi" type="sub">
+        <options name="Giriş" id="10042"/>
+      </menu>
+      <menu name="Ürün Teklifi Ara" ref="find_teklif" type="sub">
+        <options name="Giriş" id="10043"/>
+      </menu>
+      <menu name="Satış Fatura Talep Formu" ref="list_satis_fatura_talep_formu" type="sub">
+        <options name="Kaydetme" id="1500"/>
+        <options name="Görüntüleme" id="1501"/>
+        <options name="Güncelleme" id="1502"/>
+        <options name="Onaylama" id="1542"/>
+        <options name="Silme" id="1503"/>
+        <options name="Giriş" id="10044"/>
+      </menu>
+      <menu name="Sipariş Teyit Formu" ref="list_siparis_teyid_formu" type="sub">
+        <options name="Kaydetme" id="1504"/>
+        <options name="Görüntüleme" id="1505"/>
+        <options name="Güncelleme" id="1506"/>
+        <options name="Onaylama" id="1543"/>
+        <options name="Silme" id="1507"/>
+        <options name="Giriş" id="10045"/>
+      </menu>
+      <menu name="Satış Sevkiyat Takip Formu" ref="list_satis_sevkiyat_takip_formu" type="sub">
+        <options name="Kaydetme" id="1508"/>
+        <options name="Görüntüleme" id="1509"/>
+        <options name="Güncelleme" id="1510"/>
+        <options name="Onaylama" id="1544"/>
+        <options name="Silme" id="1511"/>
+        <options name="Giriş" id="10046"/>
+        <options name="RevRev Onay" id="20189"/>
+      </menu>
+      <menu name="Mail İle Gönderilen Teklifler" ref="find_teklif_mail" type="sub">
+        <options name="Giriş" id="10047"/>
+      </menu>
+    </subitem>
+    <subitem name="WorkSheet Yönetimi" type ="par">
+      <menu name="Yeni WorkSheet" ref="insert_worksheet" type="sub">
+        <options name="Karsız Satış" id="10170"/>
+        <options name="Fiyat Değiştir" id="10168"/>
+        <options name="Giriş" id="10173"/>
+      </menu>
+      <menu name="Onay Beyleyen WorkSheetler" ref="insert_worksheet" type="sub">
+        <options name="Onaylama" id="10169"/>
+        <options name="Giriş" id="10174"/>
+      </menu>
+      <menu name="Proformalar" ref="select_proforma" type="sub">
+        <options name="Proforma Oluşturma" id="10175"/>
+        <options name="Giriş" id="10176"/>
+      </menu>
+      <menu name="Application Cost" ref="insert_appcost" type="sub">
+        <options name="Kayıt" id="10177"/>
+        <options name="Giriş" id="10178"/>
+      </menu>
+
+
+
+    </subitem>
+    <subitem name="Kampanya Yönetimi" type="par">
+      <menu name="Yeni Kampanya" ref="insert_kampanya" type="sub">
+        <options name="Kaydetme" id="1000"/>
+        <options name="Görüntüleme" id="1001"/>
+        <options name="Güncelleme" id="1002"/>
+        <options name="Silme" id="1003"/>
+        <options name="Giriş" id="10048"/>
+      </menu>
+      <menu name="Kampanya Ara" ref="find_kampanya" type="sub">
+        <options name="Giriş" id="10049"/>
+      </menu>
+    </subitem>
+    <subitem name="Proje-İhale Yönetimi" type="par">
+      <menu name="Yeni Proje" ref="insert_proje" type="sub">
+        <options name="Kaydetme" id="1004"/>
+        <options name="Görüntüleme" id="1005"/>
+        <options name="Güncelleme" id="1006"/>
+        <options name="Silme" id="1007"/>
+        <options name="Giriş" id="10050"/>
+      </menu>
+      <menu name="Proje Takip" ref="find_proje" type="sub">
+        <options name="Giriş" id="10051"/>
+      </menu>
+      <menu name="Proje Takip Ara" ref="find_proje_takip" type="sub">
+        <options name="Giriş" id="10058"/>
+      </menu>
+      <menu name="Yeni İhale" ref="insert_proje" type="sub">
+        <options name="Giriş" id="10195"/>
+        <options name="Görüntüleme" id="10196"/>
+        <options name="Güncelleme" id="10197"/>
+        <options name="Kaydetme" id="10198"/>
+        <options name="Silme" id="10199"/>
+      </menu>
+      <menu name="İhale Arama" ref="find_proje" type="sub">
+        <options name="Giriş" id="10200"/>
+      </menu>
+      <menu name="İhale teklifi" ref="find_proje" type="sub">
+        <options name="İhale teklifi giriş" id="10301"/>
+        <options name="Yeni ihale teklifi" id="10302"/>
+        <options name="İhale teklifi ara" id="10303"/>
+        <options name="İhale teklifi güncelle" id="10304"/>
+        <options name="İhale teklifi görüntüle" id="10305"/>
+        <options name="İhale ürün eşleştirme" id="10306"/>
+        <options name="İhale Teklifi Silme" id="20190"/>
+        <options name="İhale Teklifi Onaylama" id="20191"/>
+      </menu>
+    </subitem>
+    <subitem name="Sözleşme Yönetimi" type="par">
+      <menu name="Yeni Sözleşme" ref="insert_sozlesme" type="sub">
+        <options name="Kaydetme" id="1534"/>
+        <options name="Görüntüleme" id="1535"/>
+        <options name="Güncelleme" id="1536"/>
+        <options name="Silme" id="1537"/>
+        <options name="Giriş" id="10052"/>
+      </menu>
+      <menu name="Sözleşme Ara" ref="find_sozlesme" type="sub">
+        <options name="Giriş" id="10053"/>
+      </menu>
+    </subitem>
+    <subitem name="Satış Aktiviteleri" type="par">
+      <menu name="Yeni Satış Aktivitesi" ref="insert_satis_oncesi_aktivite" type="sub">
+        <options name="Kaydetme" id="1520"/>
+        <options name="Görüntüleme(İlgili Personel)" id="1521"/>
+        <options name="Görüntüleme(Tüm Personel)" id="1522"/>
+        <options name="Güncelleme" id="1523"/>
+        <options name="Silme" id="1524"/>
+        <options name="Giriş" id="10054"/>
+      </menu>
+      <menu name="Satış Aktivitesi Ara" ref="list_satis_oncesi_aktivite" type="sub">
+        <options name="Giriş" id="10055"/>
+      </menu>
+      <menu name="Gizli Müşteri Anketi" ref="../../eformlar/insert_gizli_musteri_anket.aspx" type="sub">
+        <options name="Giriş" id="10214"/>
+      </menu>
+    </subitem>
+    <subitem name="Satış Fırsatları" type="par">
+      <menu name="Yeni Satış Fırsatı" ref="insert_satis_firsati" type="sub">
+        <options name="Kaydetme" id="1538"/>
+        <options name="Görüntüleme" id="1539"/>
+        <options name="Güncelleme" id="1540"/>
+        <options name="Silme" id="1541"/>
+        <options name="Giriş" id="10056"/>
+      </menu>
+      <menu name="Satış Fırsatı Ara" ref="find_satis_firsati" type="sub">
+        <options name="Giriş" id="10057"/>
+      </menu>
+    </subitem>
+  </item>
+
+  <!-- SATIN ALIM SİPARİŞ YÖNETİMİ -->
+  <item name="Satın Alım Sipariş Yönetimi">
+    <menu name="Satınalma Teklif" ref="satinalim_teklifler" type="par">
+      <options name="Kaydetme" id="70000"/>
+      <options name="Görüntüleme" id="70001"/>
+      <options name="Düzeltme" id="70002"/>
+      <options name="Silme" id="70003"/>
+      <options name="Arama" id="70004"/>
+      <options name="Teklif Kopyalama" id="70211"/>
+      <options name="Teklif Durum Guncelleme" id="70277"/>
+    </menu>
+    <menu name="Satınalma Talep" ref="satinalim_talepler" type="par">
+      <options name="Kaydetme" id="70005"/>
+      <options name="Görüntüleme" id="70006"/>
+      <options name="Düzeltme" id="70007"/>
+      <options name="Silme" id="70008"/>
+      <options name="Siparişe Çevirme" id="70212"/>
+      <options name="Satın Alma Talepleri Eldeki Stok" id="70268"/>
+    </menu>
+    <menu name="Satınalma Talep Portföyü" ref="satinalim_talepler" type="par">
+      <options name="Kaydetme" id="70226"/>
+      <options name="Görüntüleme" id="70227"/>
+      <options name="Düzeltme" id="70228"/>
+      <options name="Silme" id="70229"/>
+      <options name="Kopyalama" id="70230"/>
+    </menu>
+    <menu name="Satınalma Sipariş" ref="satinalim_siparisler" type="par">
+      <options name="Kaydetme" id="70009"/>
+      <options name="Görüntüleme" id="70010"/>
+      <options name="Düzeltme" id="70011"/>
+      <options name="Silme" id="70012"/>
+      <options name="Ara" id="70013"/>
+      <options name="Onaylama" id="70244"/>
+      <options name="Yazdırma" id="70250"/>
+      <options name="Mail Atma" id="70251"/>
+      <options name="CSV Mail Atma" id="70259"/>
+      <options name="Birim Fiyat Görme" id="70260" />
+      <options name="Sipariş Kapatma" id="70266"/>
+      <options name="Eldeki Stok Görüntüleme" id="70278"/>
+    </menu>
+    <menu name="Alış İrsaliyesi" ref="insert_irsaliye_fatura" type="par">
+      <options name="Kaydetme" id="70014"/>
+      <options name="Görüntüleme" id="70015"/>
+      <options name="Düzeltme" id="70016"/>
+      <options name="Silme" id="70017"/>
+      <options name="Birim Fiyat Değiştiremesin" id="70273"/>
+    </menu>
+    <menu name="Alış Faturası" ref="insert_irsaliye_fatura" type="par">
+      <options name="Kaydetme" id="70018"/>
+      <options name="Görüntüleme" id="70019"/>
+      <options name="Düzeltme" id="70020"/>
+      <options name="Silme" id="70021"/>
+    </menu>
+    <menu name="Alış İade İrsaliyesi" ref="fark_fatura" type="par">
+      <options name="Kaydetme" id="70022"/>
+      <options name="Görüntüleme" id="70023"/>
+      <options name="Düzeltme" id="70024"/>
+      <options name="Silme" id="70025"/>
+    </menu>
+    <menu name="Alış İade Faturası" ref="fark_fatura" type="par">
+      <options name="Kaydetme" id="70026"/>
+      <options name="Görüntüleme" id="70027"/>
+      <options name="Düzeltme" id="70028"/>
+      <options name="Silme" id="70029"/>
+    </menu>
+    <menu name="Alış Fiyat Farkı Faturası" ref="fark_fatura" type="par">
+      <options name="Kaydetme" id="70030"/>
+      <options name="Görüntüleme" id="70031"/>
+      <options name="Düzeltme" id="70032"/>
+      <options name="Silme" id="70033"/>
+    </menu>
+    <menu name="İrsaliye Fatura Arama" ref="find_fatura" type="par">
+      <options name="İrsaliye Fatura Arama" id="70034"/>
+    </menu>
+    <menu name="Yeni Satın Alım Siparişi" ref="insert_satinalim_siparis_urun" type="par">
+      <options name="Kaydetme" id="10180"/>
+      <options name="Giriş" id="10181"/>
+    </menu>
+    <menu name="Siparişleri Düzenle" ref="olustur_satinalim_siparis" type="par">
+      <options name="Giriş" id="10182"/>
+      <options name="Kaydetme" id="10183"/>
+      <options name="Ürün Güncelleme" id="10184"/>
+      <options name="Silme" id="10185"/>
+
+    </menu>
+    <menu name="Sipariş Formu Oluştur" ref="olustur_tedarikci" type="par">
+      <options name="Giriş" id="10186"/>
+      <options name="Kaydetme" id="10187"/>
+      <options name="Ürün Güncelleme" id="10189"/>
+      <options name="Ürün Silme" id="10193"/>
+
+    </menu>
+    <menu name="Sipariş Formu Ara" ref="list_satinalim_siparis" type="par">
+      <options name="Giriş" id="10192"/>
+      <options name="Form Görüntüleme" id="10188"/>
+      <options name="Form Onaylama" id="20188"/>
+      <options name="Form Güncelleme" id="10190"/>
+      <options name="Form Silme" id="10191"/>
+    </menu>
+    <menu name="Sipariş Ara" ref="find_satinalim_siparis" type="par">
+      <options name="Giriş" id="10194"/>
+    </menu>
+    <menu name="Alış Fiyatlarını Gör" ref="find_satinalim_siparis" type="par">
+
+      <options name="Teklif Alış Fiyatı Görüntüle" id="10307"/>
+    </menu>
+  </item>
+
+  <!-- ONLİNE SİPARİŞ-->
+  <item name="Online Sipariş">
+    <menu name="Siparişlerim" ref="online_siparisler" type="par">
+      <options name="Yeni Sipariş Kaydetme" id="70153"/>
+      <options name="Siparişlerim Listeleme" id="70165"/>
+      <options name="Sipariş Merkeze Gönderme" id="70155"/>
+      <options name="Sipariş Yazdırma" id="70157"/>
+      <options name="Siparişlerim Görüntüleme" id="70154"/>
+      <options name="Güncelleme" id="70156"/>
+      <options name="Silme" id="70164"/>
+      <options name="Portfoy İken Ekleme" id="70272"/>
+      <options name="Birim Fiyat Değiştireiblsin" id="70274"/>
+    </menu>
+    <menu name="Portföylerim" ref="online_siparis_portfoyler" type="par">
+      <options name="Yeni Portföy Kaydetme" id="70158"/>
+      <options name="Görüntüleme" id="70159"/>
+      <options name="Güncelleme" id="70160"/>
+      <options name="Yazdırma" id="70161"/>
+      <options name="Siparşe Çevirme" id="70162"/>
+      <options name="Silme" id="70163"/>
+    </menu>
+    <menu name="Sevk İrsaliyeleri" ref="insert_sevk_irsaliye" type="par">
+      <options name="Yeni Sevk İrsaliye Kaydetme" id="70083"/>
+      <options name="Görüntüleme" id="70084"/>
+      <options name="Düzeltme" id="70085"/>
+      <options name="Silme" id="70086"/>
+      <options name="Sevk İrsaliyesi Evrak No Zorunluluğu" id="70281"/>
+    </menu>
+    <menu name="Şube Siparişleri" ref="online_siparisler" type="par">
+      <options name="Şube Siparişleri Listeleme" id="70078"/>
+      <options name="Şube Siparişleri Üretime Gönderme" id="70079"/>
+      <options name="Şube Siparişleri Sevk Etme" id="70080"/>
+      <options name="Şube Siparişleri İrsaliye" id="70081"/>
+      <options name="Şube Siparişi Rapor Alma" id="70082"/>
+      <options name="Siparişi Silme" id="7280"/>
+      <options name="Siparişi Düzenleme" id="7281"/> 
+      <options name="Online Sipariş Onaylama Yetkisi" id="70279"/>
+      <options name="Tüm Siparişleri Görebilsin" id="70280"/>
+      <options name="Müşteri Bilgileri Giremesin" id="70282"/>
+    </menu>
+    <menu name="Kaparolar" ref="online_kaparo" type="par">
+      <options name="Yeni Kaparo Kaydetme" id="70166"/>
+      <options name="Görüntüleme" id="70167"/>
+      <options name="Güncelleme" id="70168"/>
+      <options name="Silme" id="70169"/>
+    </menu>
+    <menu name="Bekleyen Mal Kabullerim" ref="online_kaparo" type="par">
+      <options name="Bekleyen Mal Kabullerim Kaydetme" id="70170"/>
+      <options name="Bekleyen Mal Kabullerim Düzenleme" id="70269"/>
+    </menu>
+    <menu name="Siparis Goruntuleme" ref="online_siparis_view" type="par">
+      <options name="Eldeki Stok Görüntüleme" id="70276"/>
+   </menu>
+  </item>
+
+  <!-- SATIŞ VE ÜRETİM İŞLEMLERİ-->
+  <item name="Satış ve Üretim İşlemleri">
+    <menu name="Toptan Satış İrsaliyesi" ref="insert_irsaliye_fatura" type="par">
+      <options name="Kaydetme" id="70035"/>
+      <options name="Görüntüleme" id="70036"/>
+      <options name="Düzeltme" id="70037"/>
+      <options name="Silme" id="70038"/>
+    </menu>
+    <menu name="Toptan Satış Faturası" ref="insert_irsaliye_fatura" type="par">
+      <options name="Kaydetme" id="70039"/>
+      <options name="Görüntüleme" id="70040"/>
+      <options name="Düzeltme" id="70041"/>
+      <options name="Silme" id="70042"/>
+    </menu>
+    <menu name="Toptan Satış İade İrsaliyesi" ref="fark_fatura" type="par">
+      <options name="Kaydetme" id="70043"/>
+      <options name="Görüntüleme" id="70044"/>
+      <options name="Düzeltme" id="70045"/>
+      <options name="Silme" id="70046"/>
+    </menu>
+    <menu name="Toptan Satış İade Faturası" ref="fark_fatura" type="par">
+      <options name="Kaydetme" id="70047"/>
+      <options name="Görüntüleme" id="70048"/>
+      <options name="Düzeltme" id="70049"/>
+      <options name="Silme" id="70050"/>
+    </menu>
+    <menu name="Toptan Satış Fiyat Farkı Faturası" ref="fark_fatura" type="par">
+      <options name="Kaydetme" id="70051"/>
+      <options name="Görüntüleme" id="70052"/>
+      <options name="Düzeltme" id="70053"/>
+      <options name="Silme" id="70054"/>
+    </menu>
+    <menu name="POS" ref="pos_aktarim" type="par">
+      <options name="POS Veri Aktarımları" id="70055"/>
+      <options name="POS Konfigürasyon" id="70231"/>
+    </menu>
+    <menu name="Manuel POS Gelir Girişi" ref="" type="par">
+      <options name="POS Gelir Girişi Kaydetme" id="70056"/>
+      <options name="POS Gelir Girişi Görüntüleme" id="70057"/>
+      <options name="POS Gelir Girişi Düzeltme" id="70058"/>
+      <options name="POS Gelir Girişi Silme" id="70059"/>
+    </menu>
+    <menu name="Gelir Girişi Düzeltme ve Düşüm" ref="insert_gelir_dusum_duzeltme" type="par">
+      <options name="Kaydetme" id="70060"/>
+      <options name="Görüntüleme" id="70061"/>
+      <options name="Düzeltme" id="70062"/>
+      <options name="Silme" id="70063"/>
+    </menu>
+    <menu name="Üretim Girişi" ref="insert_uretim_fisi" type="per">
+      <options name="Kaydetme" id="70064"/>
+      <options name="Görüntüleme" id="70065"/>
+      <options name="Düzeltme" id="70066"/>
+      <options name="Silme" id="70067"/>
+      <options name="Arama" id="70068"/>
+	<options name="Üretim Fişi Eldeki Stok Görme" id="70264"/>
+    </menu>
+  </item>
+
+  <!--ENVANTER YÖNETİMİ-->
+  <item name="Envanter Yönetimi">
+    <menu name="Depolar Arası Transfer" ref="insert_transfer_fisi" type="par">
+      <options name="Kaydetme" id="70069"/>
+      <options name="Görüntüleme" id="70070"/>
+      <options name="Düzeltme" id="70071"/>
+      <options name="Silme" id="70072"/>
+      <options name="Onaylama" id="70253"/>
+      <options name="Onaya Gönderme" id="70258"/>
+      <options name="Transfer Etme" id="70245"/>
+      <options name="Eldeki Stok Görüntüleme" id="70262"/>
+      <options name="Eldeki Stok Eksiye Düşmesin" id="70275"/>
+    </menu>
+    <menu name="Transfer Talebi" ref="find_transfer_fisi" type="par">
+      <options name="Kaydetme" id="70073"/>
+      <options name="Görüntüleme" id="70074"/>
+      <options name="Düzeltme" id="70075"/>
+      <options name="Silme" id="70076"/>
+      <options name="Arama" id="70077"/>
+      <options name="Eldeki Stok Görüntüleme" id="70263"/>
+    </menu>
+    <menu name="Malzeme İşlem Fişi" ref="insert_malzeme_islem_fis" type="par">
+      <options name="Kaydetme" id="70088"/>
+      <options name="Görüntüleme" id="70089"/>
+      <options name="Düzeltme" id="70090"/>
+      <options name="Silme" id="70091"/>
+      <options name="Arama" id="70092"/>
+      <options name="Eldeki Stok Görme" id="70261"/>
+    </menu>
+    <menu name="Genel Masraf Fişi" ref="insert_giderler" type="par">
+      <options name="Kaydetme" id="70093"/>
+      <options name="Görüntüleme" id="70094"/>
+      <options name="Düzeltme" id="70095"/>
+      <options name="Silme" id="70096"/>
+      <options name="Arama" id="70097"/>
+    </menu>
+    <menu name="Açılış Fişi" ref="insert_acilis_fisi" type="par">
+      <options name="Kaydetme" id="70098"/>
+      <options name="Görüntüleme" id="70099"/>
+      <options name="Düzeltme" id="70100"/>
+      <options name="Silme" id="70101"/>
+    </menu>
+    <menu name="Sayım Fişi" ref="insert_sayim_fisi" type="par">
+      <options name="Kaydetme" id="70102"/>
+      <options name="Görüntüleme" id="70103"/>
+      <options name="Düzeltme" id="70104"/>
+      <options name="Silme" id="70105"/>
+      <options name="Arama" id="70106"/>
+      <options name="Eldeki Stok Görme" id="70225"/>
+    </menu>
+    <menu name="Dönem Kapatma" ref="donem_kapatma" type="par">
+      <options name="Kaydetme" id="70107"/>
+      <options name="Görüntüleme" id="70108"/>
+    </menu>
+    <menu name="Dönem açma" ref="donem_acma" type="par">
+      <options name="Kaydetme" id="70270"/>
+      <options name="Görüntüleme" id="70271"/>
+    </menu>
+    <menu name="Stok Haraketleri" ref="stok_haraketleri" type="par">
+      <options name="Kaydetme" id="70171"/>
+    </menu>
+    <menu name="Eldeki Stok Görüntüle" ref="eldeki_stok" type="par">
+      <options name="Kaydetme" id="70172"/>
+    </menu>
+  </item>
+
+  <!-- KAYNAK YÖNETİMİ -->
+  <item name="Kaynak Yönetimi">
+    <subitem name="Muhasebe" type="par">
+      <menu name="Yeni Banka Talimatı" ref="insert_banka_talimat" type="sub">
+        <options name="Kaydetme" id="9000"/>
+        <options name="Görüntüleme" id="9001"/>
+        <options name="Güncelleme" id="9002"/>
+        <options name="Silme" id="9003"/>
+        <options name="Giriş" id="10061"/>
+      </menu>
+      <menu name="Banka Talimatı Ara" ref="find_banka_talimat" type="sub">
+        <options name="Giriş" id="10062"/>
+      </menu>
+      <menu name="Yeni Yurtdışı Transferi" ref="insert_transfer_talimati" type="sub">
+        <options name="Kaydetme" id="9004"/>
+        <options name="Görüntüleme" id="9005"/>
+        <options name="Güncelleme" id="9006"/>
+        <options name="Silme" id="9007"/>
+        <options name="Giriş" id="10063"/>
+      </menu>
+      <menu name="Yurtdışı Transferi Ara" ref="find_transfer_talimat" type="sub">
+        <options name="Giriş" id="10064"/>
+      </menu>
+      <menu name="Yeni Satınalma Siparişi" ref="insert_satinalim_siparis" type="sub">
+        <options name="Kaydetme" id="1530"/>
+        <options name="Görüntüleme" id="1531"/>
+        <options name="Güncelleme" id="1532"/>
+        <options name="Silme" id="1533"/>
+        <options name="Giriş" id="10065"/>
+      </menu>
+      <menu name="Satınalma Siparişi Ara" ref="list_satinalim_siparis" type="sub">
+        <options name="Giriş" id="10066"/>
+      </menu>
+    </subitem>
+    <subitem name="Ödeme Kaydı" type="par">
+      <menu name="Ödeme" ref="odeme" type="sub">
+        <options name="Kaydetme" id="70219"/>
+        <options name="Görüntüleme" id="70220"/>
+        <options name="Güncelleme" id="70221"/>
+        <options name="Silme" id="70222"/>
+        <options name="Giriş" id="70223"/>
+      </menu>
+    </subitem>
+    <subitem name="Yedek Parça Yönetimi" type="par">
+      <menu name="Yeni Yedek Parça" ref="insert_yedek_parca" type="sub">
+        <options name="Kaydetme" id="1028"/>
+        <options name="Görüntüleme" id="1029"/>
+        <options name="Güncelleme" id="1030"/>
+        <options name="Silme" id="1031"/>
+        <options name="Giriş" id="10071"/>
+      </menu>
+      <menu name="Yedek Parça Ara" ref="find_yedek_parca" type="sub">
+        <options name="Giriş" id="10072"/>
+      </menu>
+      <menu name="Yedek Paraça Çarpanı" ref="insert_yedek_parca_carpan" type="sub">
+        <options name="Kaydetme" id="1037"/>
+        <options name="Görüntüleme" id="1038"/>
+        <options name="Güncelleme" id="1039"/>
+        <options name="Silme" id="1040"/>
+        <options name="Giriş" id="10073"/>
+      </menu>
+    </subitem>
+  </item>
+
+  <!-- SERVİS YÖNETİMİ -->
+  <item name="Servis Yönetimi">
+    <subitem name="Yardım Masası" type="par">
+      <menu name="Arıza Bildirimi" ref="insert_musteri_sikayeti" type="sub">
+        <options name="Kaydetme" id="190"/>
+        <options name="Görüntüleme" id="191"/>
+        <options name="Güncelleme" id="192"/>
+        <options name="Silme" id="193"/>
+        <options name="Giriş" id="10081"/>
+        <options name="Cevaplama Tarihi" id="20196"/>
+        <options name="Şikayet Tarihi" id="20195"/>
+        <options name="Kapalı Çağrı Güncelleme" id="70232"/>
+        <options name="Kapalı Çağrı Görüntüleme" id="70242"/>
+        <options name="Çağrı Kapatma" id="70243"/>
+      </menu>
+      <menu name="Arıza Bildirimi Ara" ref="find_musteri_sikayeti" type="sub">
+        <options name="Giriş" id="10082"/>
+      </menu>
+    </subitem>
+    <subitem name="Tamir-Bakım" type="par">
+      <menu name="Yeni Servis Girişi" ref="servis_girisi" type="sub">
+        <options name="Kaydetme" id="5"/>
+        <options name="Görüntüleme" id="6"/>
+        <options name="Güncelleme" id="7"/>
+        <options name="Silme" id="8"/>
+        <options name="Giriş" id="10083"/>
+      </menu>
+      <menu name="Servis Personeli Görevlendir" ref="list_servis_gorevli" type="sub">
+        <options name="Giriş" id="10084"/>
+      </menu>
+      <menu name="Servis Takip" ref="find_ariza_takip" type="sub">
+        <options name="Giriş" id="10085"/>
+        <options name="Tamir Raporu Yetkilisi" id="10300"/>
+      </menu>
+      <menu name="Yeni Yedek Parça Teklifi" ref="insert_yedek_parca_teklif" type="sub">
+        <options name="Kaydetme" id="8025"/>
+        <options name="Görüntüleme" id="8026"/>
+        <options name="Güncelleme" id="8027"/>
+        <options name="Silme" id="8028"/>
+        <options name="Giriş" id="10086"/>
+      </menu>
+      <menu name="Yedek Parça Teklifi Ara" ref="list_yedek_parca_teklif" type="sub">
+        <options name="Giriş" id="10087"/>
+      </menu>
+      <menu name="Birebir Ürün Değişimi" ref="insert_urun_hizli_degisim" type="sub">
+        <options name="Giriş" id="10088"/>
+      </menu>
+    </subitem>
+    <subitem name="Hizmet" type="par">
+      <menu name="Montajı Yapılacak Ürünler" ref="list_montaj_yapilacak_urunler" type="sub">
+        <options name="Giriş" id="10101"/>
+      </menu>
+      <menu name="Devreye Alınacak Ürünler" ref="list_montaj_devreyealma" type="sub">
+        <options name="Giriş" id="10089"/>
+      </menu>
+      <menu name="Devreye Alınan Ürünler" ref="list_devreye_alma_aktarim" type="sub">
+        <options name="Kaydetme" id="8037"/>
+        <options name="Görüntüleme" id="8038"/>
+        <options name="Güncelleme" id="8039"/>
+        <options name="Silme" id="8040"/>
+        <options name="Giriş" id="10090"/>
+      </menu>
+      <menu name="Satılan Ürün Ara" ref="find_satilan_urunler" type="sub">
+        <options name="Giriş" id="10091"/>
+      </menu>
+      <menu name="Satılan Ürün-Parça Ara" ref="find_satilan_urun_detay" type="sub">
+        <options name="Giriş" id="10092"/>
+        <options name="Garanti Süresi Güncelle" id="10167"/>
+      </menu>
+    </subitem>
+    <subitem name="Kalibrasyon" type="par">
+      <menu name="Yeni Kalibrasyon Teklifi" ref="insert_kalibrasyon_teklif" type="sub">
+        <options name="Kaydetme" id="73"/>
+        <options name="Görüntüleme" id="74"/>
+        <options name="Güncelleme" id="75"/>
+        <options name="Onaylama" id="1033"/>
+        <options name="Silme" id="76"/>
+        <options name="Giriş" id="10093"/>
+      </menu>
+      <menu name="Kalibrasyon Teklif Takip" ref="find_kalibrasyon_teklif_takip" type="sub">
+        <options name="Giriş" id="10094"/>
+      </menu>
+      <menu name="Kalibrasyon Sözleşmesi" ref="insert_kalibrasyon_sozlesme" type="sub">
+        <options name="Kaydetme" id="1512"/>
+        <options name="Görüntüleme" id="1513"/>
+        <options name="Güncelleme" id="1514"/>
+        <options name="Silme" id="1515"/>
+        <options name="Giriş" id="10095"/>
+      </menu>
+      <menu name="Yeni Periyodik Kalibrasyon" ref="insert_periyodik_kalibrasyon" type="sub">
+        <options name="Giriş" id="10096"/>
+      </menu>
+      <menu name="Periyodik Kalibrasyon Takip" ref="find_periyod_takip" type="sub">
+        <options name="Giriş" id="10097"/>
+      </menu>
+    </subitem>
+    <subitem name="Periyodik Bakım" type="par">
+      <menu name="Periyodik Bakım Sözleşmesi" ref="insert_bakim_sozlesme" type="sub">
+        <options name="Giriş" id="10098"/>
+      </menu>
+      <menu name="Yeni Periyodik Bakım" ref="insert_periyodik_bakim" type="sub">
+        <options name="Giriş" id="10099"/>
+      </menu>
+      <menu name="Periyodik Bakım Takip" ref="find_bakim_takip" type="sub">
+        <options name="Giriş" id="10100"/>
+      </menu>
+    </subitem>
+  </item>
+
+  <!-- DÖKÜMAN YÖNETİMİ -->
+  <item name="Döküman Yönetimi">
+    <menu name="İç Yazışma" ref="insert_dahili_yazisma" type="par">
+      <options name="Kaydetme" id="9200"/>
+      <options name="Görüntüleme" id="9201"/>
+      <options name="Güncelleme" id="9202"/>
+      <options name="Silme" id="9203"/>
+      <options name="Giriş" id="10111"/>
+
+    </menu>
+    <menu name="Dış Yazışma" ref="insert_dis_cagri" type="par">
+      <options name="Kaydetme" id="9204"/>
+      <options name="Görüntüleme" id="9205"/>
+      <options name="Güncelleme" id="9206"/>
+      <options name="Silme" id="9207"/>
+      <options name="Giriş" id="10112"/>
+    </menu>
+    <menu name="Dilekçe" ref="insert_dilekce" type="par">
+      <options name="Kaydetme" id="9300"/>
+      <options name="Görüntüleme" id="9301"/>
+      <options name="Güncelleme" id="9302"/>
+      <options name="Silme" id="9303"/>
+      <options name="Giriş" id="10113"/>
+    </menu>
+    <menu name="Yeni Döküman" ref="insert_dokuman" type="par">
+      <options name="Kaydetme" id="7000"/>
+      <options name="Görüntüleme" id="7001"/>
+      <options name="Güncelleme" id="7002"/>
+      <options name="Silme" id="7003"/>
+      <options name="Giriş" id="10114"/>
+      <options name="Döküman Yetkilendirme" id="50906"/>
+    </menu>
+    <menu name="Döküman Ara" ref="find_dokuman" type="par">
+      <options name="Giriş" id="10115"/>
+    </menu>
+    <menu name="Bilgi Ara" ref="list_dokuman" type="par">
+      <options name="Giriş" id="10116"/>
+    </menu>
+  </item>
+
+  <!-- YÖNETİM İŞLEMLERİ -->
+  <item name="Yönetim İşlemleri">
+    <subitem name="Tanımlar" type="par">
+      <menu name="Banka" ref="insert_banka" type="sub">
+        <options name="Kaydetme" id="25"/>
+        <options name="Görüntüleme" id="26"/>
+        <options name="Güncelleme" id="27"/>
+        <options name="Silme" id="28"/>
+        <options name="Giriş" id="10117"/>
+      </menu>
+      <menu name="Banka Şubesi" ref="insert_banka_subesi" type="sub">
+        <options name="Kaydetme" id="161"/>
+        <options name="Görüntüleme" id="162"/>
+        <options name="Güncelleme" id="163"/>
+        <options name="Silme" id="164"/>
+        <options name="Giriş" id="10118"/>
+      </menu>
+      <menu name="Banka Yetkilisi" ref="insert_banka_yetkilisi" type="sub">
+        <options name="Kaydetme" id="9504"/>
+        <options name="Görüntüleme" id="9505"/>
+        <options name="Güncelleme" id="9506"/>
+        <options name="Silme" id="9507"/>
+        <options name="Giriş" id="10119"/>
+      </menu>
+      <menu name="Bölge Tanımlama" ref="insert_bolgeler" type="sub">
+        <options name="Kaydetme" id="10308"/>
+        <options name="Görüntüleme" id="10309"/>
+        <options name="Güncelleme" id="10310"/>
+        <options name="Silme" id="10311"/>
+      </menu>
+      <menu name="Döküman Tipi" ref="insert_dokuman_tipi" type="sub">
+        <options name="Kaydetme" id="173"/>
+        <options name="Görüntüleme" id="174"/>
+        <options name="Güncelleme" id="175"/>
+        <options name="Silme" id="176"/>
+        <options name="Giriş" id="10120"/>
+      </menu>
+      <menu name="Depo" ref="insert_depo" type="sub">
+        <options name="Kaydetme" id="10208"/>
+        <options name="Görüntüleme" id="10209"/>
+        <options name="Güncelleme" id="10210"/>
+        <options name="Silme" id="10211"/>
+        <options name="Giriş" id="10207"/>
+      </menu>
+      <menu name="Transfer Firma Hesabı" ref="insert_transfer_firma" type="sub">
+        <options name="Kaydetme" id="9500"/>
+        <options name="Görüntüleme" id="9501"/>
+        <options name="Güncelleme" id="9502"/>
+        <options name="Silme" id="9503"/>
+        <options name="Giriş" id="10121"/>
+      </menu>
+      <menu name="Birim Seti" ref="insert_birim_seti" type="sub">
+        <options name="Kaydetme" id="29"/>
+        <options name="Görüntüleme" id="30"/>
+        <options name="Güncelleme" id="31"/>
+        <options name="Silme" id="32"/>
+        <options name="Giriş" id="10122"/>
+      </menu>
+      <menu name="Bölüm" ref="insert_bolum" type="sub">
+        <options name="Kaydetme" id="33"/>
+        <options name="Görüntüleme" id="34"/>
+        <options name="Güncelleme" id="35"/>
+        <options name="Silme" id="36"/>
+        <options name="Giriş" id="10123"/>
+      </menu>
+      <menu name="Firma Türü" ref="insert_firma_turu" type="sub">
+        <options name="Kaydetme" id="45"/>
+        <options name="Görüntüleme" id="46"/>
+        <options name="Güncelleme" id="47"/>
+        <options name="Silme" id="48"/>
+        <options name="Giriş" id="10124"/>
+      </menu>
+      <menu name="Firmaya Ulaşılan Kaynak" ref="insert_haber" type="sub">
+        <options name="Kaydetme" id="65"/>
+        <options name="Görüntüleme" id="66"/>
+        <options name="Güncelleme" id="67"/>
+        <options name="Silme" id="68"/>
+        <options name="Giriş" id="10125"/>
+      </menu>
+      <menu name="Fiyat Türü" ref="insert_fiyat_turu" type="sub">
+        <options name="Kaydetme" id="49"/>
+        <options name="Görüntüleme" id="50"/>
+        <options name="Güncelleme" id="51"/>
+        <options name="Silme" id="52"/>
+        <options name="Giriş" id="10126"/>
+      </menu>
+      <menu name="Gönderi Firma" ref="insert_gonderi_firma" type="sub">
+        <options name="Kaydetme" id="145"/>
+        <options name="Görüntüleme" id="146"/>
+        <options name="Güncelleme" id="147"/>
+        <options name="Silme" id="148"/>
+        <options name="Giriş" id="10127"/>
+      </menu>
+      <menu name="Gönderi Türü" ref="insert_gonderi_turu" type="sub">
+        <options name="Kaydetme" id="149"/>
+        <options name="Görüntüleme" id="150"/>
+        <options name="Güncelleme" id="151"/>
+        <options name="Silme" id="152"/>
+        <options name="Giriş" id="10128"/>
+      </menu>
+      <menu name="Para Birimi" ref="insert_para_birimi" type="sub">
+        <options name="Kaydetme" id="109"/>
+        <options name="Görüntüleme" id="110"/>
+        <options name="Güncelleme" id="111"/>
+        <options name="Silme" id="112"/>
+        <options name="Giriş" id="10130"/>
+      </menu>
+      <menu name="Sektör" ref="insert_sektor" type="sub">
+        <options name="Kaydetme" id="121"/>
+        <options name="Görüntüleme" id="122"/>
+        <options name="Güncelleme" id="123"/>
+        <options name="Silme" id="124"/>
+        <options name="Giriş" id="10131"/>
+      </menu>
+      <menu name="Şehir" ref="insert_sehir" type="sub">
+        <options name="Kaydetme" id="117"/>
+        <options name="Görüntüleme" id="118"/>
+        <options name="Güncelleme" id="119"/>
+        <options name="Silme" id="120"/>
+        <options name="Giriş" id="10132"/>
+      </menu>
+      <menu name="Ülke" ref="insert_ulke" type="sub">
+        <options name="Kaydetme" id="137"/>
+        <options name="Görüntüleme" id="138"/>
+        <options name="Güncelleme" id="139"/>
+        <options name="Silme" id="140"/>
+        <options name="Giriş" id="10133"/>
+      </menu>
+      <menu name="Hesap Türü" ref="insert_hesap_turu" type="sub">
+        <options name="Kaydetme" id="178"/>
+        <options name="Görüntüleme" id="179"/>
+        <options name="Güncelleme" id="180"/>
+        <options name="Silme" id="181"/>
+        <options name="Giriş" id="10134"/>
+      </menu>
+      <menu name="Form Referans" ref="insert_form_referans" type="sub">
+        <options name="Giriş" id="10162"/>
+      </menu>
+      <menu name="Döviz Seçimi" ref="insert_doviz_secimi" type="sub">
+        <options name="Giriş" id="10163"/>
+      </menu>
+      <menu name="Gizli Müşteri" ref="insert_gizli_musteri" type="sub">
+        <options name="Giriş" id="10213"/>
+      </menu>
+      <menu name="Kasa" ref="insert_kasa_tanim" type="sub">
+        <options name="Kaydetme" id="70109"/>
+        <options name="Görüntüleme" id="70110"/>
+        <options name="Düzeltme" id="70111"/>
+        <options name="Silme" id="70112"/>
+      </menu>
+      <menu name="Gelir Merkezi" ref="insert_gelir_merkezi" type="sub">
+        <options name="Kaydetme" id="70113"/>
+        <options name="Görüntüleme" id="70114"/>
+        <options name="Düzeltme" id="70115"/>
+        <options name="Silme" id="70116"/>
+      </menu>
+      <menu name="Hesap Dönemi" ref="insert_hesap_donem" type="sub">
+        <options name="Kaydetme" id="70117"/>
+        <options name="Görüntüleme" id="70118"/>
+        <options name="Düzeltme" id="70119"/>
+        <options name="Silme" id="70120"/>
+      </menu>
+      <menu name="Masraf Tipleri" ref="insert_masraf_tipleri" type="sub">
+        <options name="Kaydetme" id="70121"/>
+        <options name="Görüntüleme" id="70122"/>
+        <options name="Düzeltme" id="70123"/>
+        <options name="Silme" id="70124"/>
+      </menu>
+      <menu name="İş İstasyonları" ref="insert_istasyon" type="sub">
+        <options name="Kaydetme" id="70125"/>
+        <options name="Görüntüleme" id="70126"/>
+        <options name="Düzeltme" id="70127"/>
+        <options name="Silme" id="70128"/>
+      </menu>
+      <menu name="Düşüm Deposu" ref="insert_dusum_depo" type="sub">
+        <options name="Kaydetme" id="70129"/>
+        <options name="Görüntüleme" id="70130"/>
+        <options name="Düzeltme" id="70131"/>
+        <options name="Silme" id="70132"/>
+      </menu>
+      <menu name="Üretilmeyecek Ürünler" ref="insert_uretilmeyecek_urunler" type="sub">
+        <options name="Kaydetme" id="70133"/>
+        <options name="Görüntüleme" id="70134"/>
+        <options name="Düzeltme" id="70135"/>
+        <options name="Silme" id="70136"/>
+      </menu>
+      <menu name="Şube Ürün Üretim Yerleri" ref="insert_firma_urun" type="sub">
+        <options name="Kaydetme" id="70137"/>
+        <options name="Görüntüleme" id="70138"/>
+        <options name="Düzeltme" id="70139"/>
+        <options name="Silme" id="70140"/>
+      </menu>
+      <menu name="Min/Max Tanımı" ref="min_max_tanimi" type="sub">
+        <options name="Kaydetme" id="70149"/>
+        <options name="Görüntüleme" id="70150"/>
+        <options name="Düzeltme" id="70151"/>
+        <options name="Silme" id="70152"/>
+      </menu>
+      <menu name="Firmaya Ulaşan Kaynak" ref="insert_haber" type="sub">
+        <options name="Görüntüleme" id="70178"/>
+        <options name="Kaydetme" id="70179"/>
+      </menu>
+      <menu name="Reçete" ref="insert_recete" type="sub">
+        <options name="Kaydetme" id="70180"/>
+        <options name="Görüntüleme" id="70181"/>
+        <options name="Güncelleme" id="70182"/>
+        <options name="Silme" id="70183"/>
+        <options name="Yazdırma" id="70184"/>
+      </menu>
+      <menu name="Kullanılan Reçeteler" ref="kullanilan_receteler.aspx" type="sub">
+        <options name="Görüntüleme" id="70185"/>
+      </menu>
+      <menu name="Şirket Tanımlama" ref="insert_Sirket.aspx" type="sub">
+        <options name="Görüntüleme" id="70213"/>
+      </menu>
+      <menu name="Kişi-Firma Girişi" ref="kisi_firma_tree.aspx" type="sub">
+        <options name="Görüntüleme" id="70214"/>
+      </menu>
+      <menu name="Form Referans Nosu" ref="kisi_firma_tree.aspx" type="sub">
+        <options name="Görüntüleme" id="70216"/>
+      </menu>
+      <menu name="Ürün Ara" ref="insert_Sirket.aspx" type="sub">
+        <options name="Görüntüleme" id="70215"/>
+        <options name="Ürün Güncel Bilgileri Görüntüleme" id="70252"/>
+      </menu>
+      <menu name="Ürün-Grup Yönetim" ref="urun_tree" type="sub">
+        <options name="Giriş" id="10067"/>
+        <options name="Grup Kaydetme" id="1016"/>
+        <options name="Grup Görüntüleme" id="1017"/>
+        <options name="Grup Güncelleme" id="1018"/>
+        <options name="Grup Silme" id="1019"/>
+        <options name="Ürün Kaydetme" id="1024"/>
+        <options name="Ürün Görüntüleme" id="1025"/>
+        <options name="Ürün Güncelleme" id="1026"/>
+        <options name="Ürün Silme" id="1027"/>
+        <options name="Alış fiyatı 1 Texbox" id="10204"/>
+        <options name="Alış fiyatı 2 Texbox" id="10205"/>
+        <options name="Alış fiyatı 3 Texbox" id="10206"/>
+      </menu>
+      <menu name="Ürün Fiyatları Güncelle" ref="urun_fiyat_guncelleme" type="sub">
+        <options name="Görüntüleme" id="70173"/>
+        <options name="Kaydetme" id="70174"/>
+        <options name="Aktarma" id="70175"/>>
+      </menu>
+      <menu name="Ürün Varyasyonları" ref="urun_varyasyonlari" type="sub">
+        <options name="Görüntüleme" id="70176"/>
+        <options name="Kaydetme" id="70177"/>
+      </menu>
+      <menu name="Promosyonlar" ref="promosyon" type="sub">
+        <options name="Kaydetme" id="70233"/>
+        <options name="Görüntüleme" id="70234"/>
+        <options name="Güncelleme" id="70235"/>
+        <options name="Silme" id="70236"/>
+        <options name="Kopyalama" id="70237"/>
+      </menu>
+    </subitem>
+    <subitem name="Teklif Yönetimi " type="sub">
+      <menu name="Kalibrasyon " ref="insert_kalibrasyon" type="inl">
+        <options name="Kaydetme" id="69"/>
+        <options name="Görüntüleme" id="70"/>
+        <options name="Güncelleme" id="71"/>
+        <options name="Silme" id="72"/>
+        <options name="Giriş" id="10070"/>
+      </menu>
+      <menu name="Kalibrasyon Tipi" ref="insert_kalibrasyon_tipi" type="inl">
+        <options name="Kaydetme" id="77"/>
+        <options name="Görüntüleme" id="78"/>
+        <options name="Güncelleme" id="79"/>
+        <options name="Silme" id="80"/>
+        <options name="Giriş" id="10135"/>
+      </menu>
+      <menu name="Kampanya Statüsü" ref="insert_kampanya_statusu" type="inl">
+        <options name="Kaydetme" id="81"/>
+        <options name="Görüntüleme" id="82"/>
+        <options name="Güncelleme" id="83"/>
+        <options name="Silme" id="84"/>
+        <options name="Giriş" id="10136"/>
+      </menu>
+      <menu name="Kampanya Türü" ref="insert_kampanya_turu" type="inl">
+        <options name="Kaydetme" id="85"/>
+        <options name="Görüntüleme" id="86"/>
+        <options name="Güncelleme" id="87"/>
+        <options name="Silme" id="88"/>
+        <options name="Giriş" id="10137"/>
+      </menu>
+      <menu name="Ödeme Türü" ref="insert_odeme_turu" type="inl">
+        <options name="Kaydetme" id="97"/>
+        <options name="Görüntüleme" id="98"/>
+        <options name="Güncelleme" id="99"/>
+        <options name="Silme" id="100"/>
+        <options name="Giriş" id="10138"/>
+      </menu>
+      <menu name="Olay Türü" ref="insert_olay_turu" type="inl">
+        <options name="Kaydetme" id="101"/>
+        <options name="Görüntüleme" id="102"/>
+        <options name="Güncelleme" id="103"/>
+        <options name="Silme" id="104"/>
+        <options name="Giriş" id="10139"/>
+      </menu>
+      <menu name="Proje Statüsü" ref="insert_proje_statusu" type="inl">
+        <options name="Kaydetme" id="113"/>
+        <options name="Görüntüleme" id="114"/>
+        <options name="Güncelleme" id="115"/>
+        <options name="Silme" id="116"/>
+        <options name="Giriş" id="10140"/>
+      </menu>
+      <menu name="Teklif Türü" ref="insert_teklif_turu" type="inl">
+        <options name="Kaydetme" id="129"/>
+        <options name="Görüntüleme" id="130"/>
+        <options name="Güncelleme" id="131"/>
+        <options name="Silme" id="132"/>
+        <options name="Giriş" id="10141"/>
+      </menu>
+      <menu name="Teklif Statüsü" ref="insert_teklif_statusu" type="inl">
+        <options name="Kaydetme" id="125"/>
+        <options name="Görüntüleme" id="126"/>
+        <options name="Güncelleme" id="127"/>
+        <options name="Silme" id="128"/>
+        <options name="Giriş" id="10142"/>
+      </menu>
+      <menu name="Teklif Opsiyon" ref="insert_opsiyon" type="inl">
+        <options name="Kaydetme" id="105"/>
+        <options name="Görüntüleme" id="106"/>
+        <options name="Güncelleme" id="107"/>
+        <options name="Silme" id="108"/>
+        <options name="Giriş" id="10143"/>
+      </menu>
+      <menu name="Teslimat Süresi" ref="insert_teslimat_suresi" type="inl">
+        <options name="Kaydetme" id="169"/>
+        <options name="Görüntüleme" id="170"/>
+        <options name="Güncelleme" id="171"/>
+        <options name="Silme" id="172"/>
+        <options name="Giriş" id="10144"/>
+      </menu>
+      <menu name="Teslimat Türü" ref="insert_teslimat_turu" type="inl">
+        <options name="Kaydetme" id="133"/>
+        <options name="Görüntüleme" id="134"/>
+        <options name="Güncelleme" id="135"/>
+        <options name="Silme" id="136"/>
+        <options name="Giriş" id="10145"/>
+      </menu>
+      <menu name="Ünvan" ref="insert_unvan" type="inl">
+        <options name="Kaydetme" id="141"/>
+        <options name="Görüntüleme" id="142"/>
+        <options name="Güncelleme" id="143"/>
+        <options name="Silme" id="144"/>
+        <options name="Giriş" id="10146"/>
+      </menu>
+      <menu name="Aktivite Türü" ref="insert_satis_aktiviteleri" type="inl">
+        <options name="Kaydetme" id="186"/>
+        <options name="Görüntüleme" id="187"/>
+        <options name="Güncelleme" id="188"/>
+        <options name="Silme" id="189"/>
+        <options name="Giriş" id="10147"/>
+        <options name="Aktivite Tarih ve Saat Güncelleme" id="20192"/>
+      </menu>
+      <menu name="Tedarikçi Firma" ref="insert_tedarikci_firma" type="inl">
+        <options name="Giriş" id="10165"/>
+      </menu>
+    </subitem>
+    <subitem name="Servis Yönetimi " type="sub">
+      <menu name="Bildirim Konusu" ref="insert_ariza_turu" type="inl">
+        <options name="Kaydetme" id="13"/>
+        <options name="Görüntüleme" id="14"/>
+        <options name="Güncelleme" id="15"/>
+        <options name="Silme" id="16"/>
+        <options name="Giriş" id="10148"/>
+      </menu>
+      <menu name="Bildirim Grubu" ref="insert_ariza_grup" type="inl">
+        <options name="Kaydetme" id="70246"/>
+        <options name="Görüntüleme" id="70247"/>
+        <options name="Güncelleme" id="70248"/>
+        <options name="Silme" id="70249"/>
+      </menu>
+      <menu name="Devreye Alma Statüsü" ref="insert_devreye_alma_statusu" type="inl">
+        <options name="Kaydetme" id="157"/>
+        <options name="Görüntüleme" id="158"/>
+        <options name="Güncelleme" id="159"/>
+        <options name="Silme" id="160"/>
+        <options name="Giriş" id="10149"/>
+      </menu>
+      <menu name="Montaj Statüsü" ref="insert_montaj_statusu" type="inl">
+        <options name="Kaydetme" id="93"/>
+        <options name="Görüntüleme" id="94"/>
+        <options name="Güncelleme" id="95"/>
+        <options name="Silme" id="96"/>
+        <options name="Giriş" id="10150"/>
+      </menu>
+      <menu name="Servis Statüsü" ref="insert_ariza_statusu" type="inl">
+        <options name="Kaydetme" id="9"/>
+        <options name="Görüntüleme" id="10"/>
+        <options name="Güncelleme" id="11"/>
+        <options name="Silme" id="12"/>
+        <options name="Giriş" id="10151"/>
+      </menu>
+      <menu name="Servis Şekli" ref="insert_hizmet_sekli" type="inl">
+        <options name="Kaydetme" id="153"/>
+        <options name="Görüntüleme" id="154"/>
+        <options name="Güncelleme" id="155"/>
+        <options name="Silme" id="156"/>
+        <options name="Giriş" id="10152"/>
+      </menu>
+      <menu name="İşçilik" ref="insert_iscilik" type="inl">
+        <options name="Kaydetme" id="8033"/>
+        <options name="Görüntüleme" id="8034"/>
+        <options name="Güncelleme" id="8035"/>
+        <options name="Silme" id="8036"/>
+        <options name="Giriş" id="10153"/>
+      </menu>
+    </subitem>
+    <subitem name="Kullanıcı İşlemleri" type="par">
+      <menu name="Yeni Kullanıcı" ref="insert_kullanici" type="sub">
+        <options name="Kaydetme" id="5000"/>
+        <options name="Görüntüleme" id="5001"/>
+        <options name="Güncelleme" id="5002"/>
+        <options name="Silme" id="5003"/>
+        <options name="Giriş" id="10154"/>
+      </menu>
+      <menu name="Kullanıcı Ara" ref="find_kullanici" type="sub">
+        <options name="Giriş" id="10155"/>
+      </menu>
+      <menu name="Kullanıcı Grupları" ref="insert_kullanici_grup" type="sub">
+        <options name="Kaydetme" id="5015"/>
+        <options name="Görüntüleme" id="5016"/>
+        <options name="Giriş" id="10156"/>
+      </menu>
+      <menu name="Kullanıcı Yetkileri" ref="insert_kullanici_yetki" type="sub">
+        <options name="Görüntüleme" id="5005"/>
+        <options name="Giriş" id="10157"/>
+      </menu>
+      <menu name="Grup Menü Yetkilendirme" ref="insert_kullanici_yetki" type="sub">
+        <options name="Görüntüleme" id="70217"/>
+      </menu>
+      <menu name="Kullanıcı Menü Yetkilendirme" ref="insert_kullanici_yetki" type="sub">
+        <options name="Görüntüleme" id="70218"/>
+      </menu>
+      <menu name="Yeni Grup Tanımlama" ref="insert_grup" type="sub">
+        <options name="Kaydetme" id="5008"/>
+        <options name="Görüntüleme" id="5009"/>
+        <options name="Güncelleme" id="5010"/>
+        <options name="Silme" id="5012"/>
+        <options name="Giriş" id="10158"/>
+      </menu>
+      <menu name="Grup Yetkileri" ref="insert_grup_yetki" type="sub">
+        <options name="Kaydetme" id="5013"/>
+        <options name="Görüntüleme" id="5014"/>
+        <options name="Giriş" id="10159"/>
+      </menu>
+      <menu name="Şifre Değiştirme" ref="update_sifre" type="sub">
+        <options name="Güncelleme" id="5011"/>
+        <options name="Giriş" id="10160"/>
+      </menu>
+      <menu name="Teklif Yönetim" ref="admin_panel" type="sub">
+        <options name="Görüntüleme" id="9508"/>
+        <options name="Giriş" id="10161"/>
+      </menu>
+      <menu name="Logon Takip" ref="logon_takip" type="sub">
+        <options name="Giriş" id="10166"/>
+      </menu>
+      <menu name="Depo Yetkilendirme" ref="insert_depo" type="sub">
+        <options name="Kaydetme" id="70141"/>
+        <options name="Görüntüleme" id="70142"/>
+        <options name="Güncelleme" id="70143"/>
+        <options name="Silme" id="70144"/>
+      </menu>
+      <menu name="Depo Transfer Yetkileri" ref="???" type="sub">
+        <options name="Kaydetme" id="70145"/>
+        <options name="Görüntüleme" id="70146"/>
+        <options name="Güncelleme" id="70147"/>
+        <options name="Silme" id="70148"/>
+      </menu>
+      <menu name="Şube Yetkilendirme" ref="???" type="sub">
+          <options name="Kaydetme" id="70238"/>
+          <options name="Görüntüleme" id="70239"/>
+          <options name="Güncelleme" id="70240"/>
+          <options name="Silme" id="70241"/>
+      </menu>
+    </subitem>
+    <subitem name="E-Formlar" type="par">
+      <menu name="Anketler" ref="anket" type="sub">
+        <options name="Güncelleme" id="10215"/>
+      </menu>
+    </subitem>
+  </item>
+  <!-- ENTEGRASYONLAR -->>
+  <item name="Entegrasyonlar">
+    <menu name="Otomatik" ref="" type="par">
+      <options name="Fatura Aktarımları" id="70189"/>
+      <options name="Satış Fatura Aktarımları" id="70267"/>
+    </menu>
+  </item >
+  <!-- RAPORLAR -->>
+  <item name="Raporlar">
+    <menu name="NovaStock Raporları" ref="" type="par">
+      <options name="Mutabakat Raporu" id="70190"/>
+      <options name="Fatura Raporu" id="70191"/>
+      <options name="Şube Sipariş Raporu" id="70192"/>
+      <options name="Reçete Raporu" id="70193"/>
+      <options name="Reçetesizler Raporu" id="70194"/>
+      <options name="Sayım Farkı Raporu" id="70195"/>
+      <options name="Transfer Raporu" id="70196"/>
+      <options name="Açılış Stoğu Raporu" id="70197"/>
+      <options name="Malzeme Çıkış Raporu" id="70198"/>
+      <options name="Fiyat Farklılık Raporu" id="70199"/>
+      <options name="Kapanış Balansı Raporu" id="70200"/>
+      <options name="Satıcıya Göre Alım Raporu" id="70201"/>
+      <options name="Depo Bazında Satınalım Raporu" id="70202"/>
+      <options name="Depo Bazında Satıcıya Göre  Satınalım Raporu" id="70203"/>
+      <options name="Malzeme Hareket Raporu" id="70204"/>
+      <options name="Satış ve Karlılık Raporu" id="70205"/>
+      <options name="Eldeki Stok Raporu Özet" id="70206"/>
+      <options name="Ay Bazında Yıllık Mşt. Önr. Şik. Dağ. Rpr." id="70207"/>
+      <options name="İki Sayım Farkı Raporu" id="70224"/>
+    </menu>
+    <menu name="NovaLook Raporları" ref="" type="par">
+      <options name="Kasa Raporu" id="70208"/>
+      <options name="Departman Menu Kalemi Raporu" id="70209"/>
+      <options name="Ödenmez İkram Raporu" id="70210"/>
+    </menu>
+  </item >
+</items>
