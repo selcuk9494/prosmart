@@ -71,6 +71,10 @@ app.use(
 );
 app.options('*', cors({ origin: '*' }));
 
+app.get('/', (req, res) => {
+  res.json({ ok: true });
+});
+
 app.use((req, res, next) => {
   const startedAt = Date.now();
   const origin = (req.headers.origin ?? '').toString();
