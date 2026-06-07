@@ -1523,10 +1523,13 @@ app.post(
     try {
       row = await getBranchDataSourceConfig(branchId);
     } catch (e) {
-      if (e?.code === 'INTEGRATION_SECRET_REQUIRED') {
-        return res.status(503).json({ ok: false, error: 'INTEGRATION_SECRET_REQUIRED' });
-      }
-      throw e;
+      const code = (e?.code ?? '').toString();
+      const message = (e?.message ?? 'CONFIG_ERROR').toString();
+      return res.status(200).json({
+        ok: false,
+        error: code || 'CONFIG_ERROR',
+        message,
+      });
     }
     if (!row) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
     if (!row.isActive) return res.status(400).json({ ok: false, error: 'INACTIVE' });
