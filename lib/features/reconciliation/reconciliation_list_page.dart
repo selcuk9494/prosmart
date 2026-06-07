@@ -532,7 +532,28 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                                           );
                                         },
                                         loading: () => Text(statusLabel(r.status)),
-                                        error: (e, st) => Text(statusLabel(r.status)),
+                                        error: (e, st) {
+                                          return Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(statusLabel(r.status)),
+                                              const SizedBox(width: 8),
+                                              Tooltip(
+                                                message: 'POS canlı satış okunamadı: $e',
+                                                child: Chip(
+                                                  backgroundColor: scheme.secondaryContainer,
+                                                  label: Text(
+                                                    'Canlı yok',
+                                                    style: TextStyle(color: scheme.onSecondaryContainer),
+                                                  ),
+                                                  visualDensity: VisualDensity.compact,
+                                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  padding: EdgeInsets.zero,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
                                       ),
                               ),
                               DataCell(
@@ -562,7 +583,23 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                                           );
                                         },
                                         loading: () => Text(money.format(r.expectedSalesTotal)),
-                                        error: (e, st) => Text(money.format(r.expectedSalesTotal)),
+                                        error: (e, st) {
+                                          return Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(money.format(r.expectedSalesTotal)),
+                                              const SizedBox(width: 6),
+                                              Tooltip(
+                                                message: 'POS canlı satış okunamadı: $e',
+                                                child: Icon(
+                                                  Icons.cloud_off_outlined,
+                                                  size: 18,
+                                                  color: Theme.of(context).colorScheme.error,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
                                       ),
                               ),
                               DataCell(Text(hasOcr ? money.format(ocrCard) : '')),
