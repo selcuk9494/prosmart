@@ -1,10 +1,8 @@
 {
   "version": 2,
-  "installCommand": "git clone --depth 1 https://github.com/flutter/flutter.git -b stable flutter",
-  "buildCommand": "export PATH=\"$PWD/flutter/bin:$PATH\" && flutter --version && flutter config --enable-web && flutter pub get && flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL",
   "builds": [
     {
-      "src": "pubspec.yaml",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "build/web" }
     }

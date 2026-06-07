@@ -1,0 +1,11 @@
+{
+  "name": "prosmart-web",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "vercel-build": "git clone --depth 1 https://github.com/flutter/flutter.git -b stable flutter && export PATH=\"$PWD/flutter/bin:$PATH\" && flutter --version && flutter config --enable-web && flutter pub get && flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL",
+    "build": "npm run vercel-build"
+  }
+}
