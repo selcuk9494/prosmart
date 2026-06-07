@@ -1519,9 +1519,17 @@ app.post(
   asyncRoute(async (req, res) => {
     const branchId = (req.params.branchId ?? '').toString().trim();
     if (!branchId) return res.status(400).json({ error: 'BRANCH_REQUIRED' });
-    const row = await getBranchDataSourceConfig(branchId);
-    if (!row) return res.status(404).json({ error: 'NOT_FOUND' });
-    if (!row.isActive) return res.status(400).json({ error: 'INACTIVE' });
+    let row;
+    try {
+      row = await getBranchDataSourceConfig(branchId);
+    } catch (e) {
+      if (e?.code === 'INTEGRATION_SECRET_REQUIRED') {
+        return res.status(503).json({ ok: false, error: 'INTEGRATION_SECRET_REQUIRED' });
+      }
+      throw e;
+    }
+    if (!row) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+    if (!row.isActive) return res.status(400).json({ ok: false, error: 'INACTIVE' });
 
     const ssl = row.ssl ? { rejectUnauthorized: false } : false;
     const branchPool = new pg.Pool({
@@ -1537,7 +1545,19 @@ app.post(
     });
     try {
       const r = await branchPool.query('select 1 as ok');
-      res.json({ ok: r.rows?.[0]?.ok === 1 });
+      return res.json({ ok: r.rows?.[0]?.ok === 1 });
+    } catch (e) {
+      const code = (e?.code ?? '').toString();
+      const message = (e?.message ?? 'CONNECTION_FAILED').toString();
+      return res.status(200).json({
+        ok: false,
+        error: code || 'CONNECTION_FAILED',
+        message,
+        host: row.host,
+        port: Number(row.port),
+        database: row.database,
+        username: row.username,
+      });
     } finally {
       await branchPool.end();
     }

@@ -155,17 +155,18 @@ class BranchDataSourcesStore extends Notifier<List<BranchDataSource>> {
   }) async {
     if (!AppConfig.hasApi) return;
     final dio = ref.read(dioProvider);
+    final data = <String, dynamic>{
+      'host': host,
+      'port': port,
+      'database': database,
+      'username': username,
+      'ssl': ssl,
+      'isActive': isActive,
+      if (password != null) 'password': password,
+    };
     await dio.put<Map<String, dynamic>>(
       '/branch-data-sources/$branchId',
-      data: {
-        'host': host,
-        'port': port,
-        'database': database,
-        'username': username,
-        if (password != null) 'password': password,
-        'ssl': ssl,
-        'isActive': isActive,
-      },
+      data: data,
     );
     await refresh();
   }
@@ -173,11 +174,25 @@ class BranchDataSourcesStore extends Notifier<List<BranchDataSource>> {
   Future<bool> test(String branchId) async {
     if (!AppConfig.hasApi) return false;
     final dio = ref.read(dioProvider);
-    final res = await dio.post<Map<String, dynamic>>(
-      '/branch-data-sources/$branchId/test',
-    );
-    final data = res.data;
-    return (data?['ok'] as bool?) ?? false;
+    try {
+      final res = await dio.post<Map<String, dynamic>>(
+        '/branch-data-sources/$branchId/test',
+      );
+      final data = res.data ?? const {};
+      final ok = (data['ok'] as bool?) ?? false;
+      if (ok) return true;
+      final message = (data['message'] ?? data['error'] ?? 'Bağlantı başarısız').toString();
+      throw Exception(message);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final message = (data['message'] ?? data['error'])?.toString();
+        if (message != null && message.trim().isNotEmpty) {
+          throw Exception(message);
+        }
+      }
+      throw Exception('Bağlantı testi başarısız');
+    }
   }
 }
 
@@ -273,8 +288,8 @@ class BranchesStore extends Notifier<List<Branch>> {
       data: {
         if (name?.trim().isNotEmpty ?? false) 'name': name!.trim(),
         if (code != null) 'code': code.trim(),
-        if (isActive != null) 'isActive': isActive,
-        if (businessDayStartHour != null) 'businessDayStartHour': businessDayStartHour,
+        'isActive': ?isActive,
+        'businessDayStartHour': ?businessDayStartHour,
       },
     );
     await refresh();
@@ -407,7 +422,7 @@ class PaymentTypesStore extends Notifier<List<PaymentType>> {
           data: {
             if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
             if (code != null) 'code': code.trim(),
-            if (isActive != null) 'isActive': isActive,
+            'isActive': ?isActive,
           },
         );
     await refresh();
@@ -720,7 +735,7 @@ class WasteWarehouseSelectionStore extends Notifier<String?> {
     );
     final data = res.data ?? const {};
     final raw = data['warehouseId'];
-    state = raw == null ? null : raw.toString();
+    state = raw?.toString();
   }
 
   Future<void> setSelected({
@@ -916,7 +931,7 @@ class UnproducedProductsStore extends Notifier<List<UnproducedProduct>> {
       '/unproduced-products',
       data: {
         'productName': productName,
-        if (isBlocked != null) 'isBlocked': isBlocked,
+        'isBlocked': ?isBlocked,
       },
     );
     await refresh();
@@ -1425,8 +1440,8 @@ class InventoryInvoiceActions {
       '/inv/invoices/$invoiceId/lines',
       data: {
         'description': description,
-        if (productId != null) 'productId': productId,
-        if (unit != null) 'unit': unit,
+        'productId': ?productId,
+        'unit': ?unit,
         'quantity': quantity,
         'unitPrice': unitPrice,
       },
@@ -1453,15 +1468,15 @@ class InventoryInvoiceActions {
     await dio.patch<Map<String, dynamic>>(
       '/inv/invoices/$invoiceId',
       data: {
-        if (invoiceNo != null) 'invoiceNo': invoiceNo,
+        'invoiceNo': ?invoiceNo,
         if (invoiceDate != null) 'invoiceDate': invoiceDate.toIso8601String().substring(0, 10),
-        if (vendorName != null) 'vendorName': vendorName,
-        if (notes != null) 'notes': notes,
-        if (paymentTypeId != null) 'paymentTypeId': paymentTypeId,
-        if (incomeCenterId != null) 'incomeCenterId': incomeCenterId,
-        if (discountRate != null) 'discountRate': discountRate,
-        if (discountAmount != null) 'discountAmount': discountAmount,
-        if (mealVoucherDiscount != null) 'mealVoucherDiscount': mealVoucherDiscount,
+        'vendorName': ?vendorName,
+        'notes': ?notes,
+        'paymentTypeId': ?paymentTypeId,
+        'incomeCenterId': ?incomeCenterId,
+        'discountRate': ?discountRate,
+        'discountAmount': ?discountAmount,
+        'mealVoucherDiscount': ?mealVoucherDiscount,
         if (paymentDate != null) 'paymentDate': paymentDate.toIso8601String().substring(0, 10),
       },
     );
@@ -1570,7 +1585,7 @@ class UsersStore extends Notifier<List<AppUser>> {
         'username': username,
         'displayName': displayName,
         'role': role,
-        if (password != null) 'password': password,
+        'password': ?password,
       },
     );
     await refresh();
@@ -1602,10 +1617,10 @@ class UsersStore extends Notifier<List<AppUser>> {
     await dio.patch<Map<String, dynamic>>(
       '/users/$id',
       data: {
-        if (displayName != null) 'displayName': displayName,
-        if (role != null) 'role': role,
-        if (isActive != null) 'isActive': isActive,
-        if (password != null) 'password': password,
+        'displayName': ?displayName,
+        'role': ?role,
+        'isActive': ?isActive,
+        'password': ?password,
       },
     );
     await refresh();
@@ -2928,7 +2943,7 @@ class InventoryRecipesStore extends Notifier<List<InventoryRecipe>> {
           'description': description.trim(),
         'yieldQty': yieldQty,
         'yieldUnit': yieldUnit,
-        if (gimOran != null) 'gimOran': gimOran,
+        'gimOran': ?gimOran,
         'lines': [
           for (final l in lines)
             {
