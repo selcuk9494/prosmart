@@ -18,15 +18,20 @@ class AdminUserMenuPermissionsPage extends ConsumerStatefulWidget {
 class _AdminUserMenuPermissionsPageState
     extends ConsumerState<AdminUserMenuPermissionsPage> {
   String? _selectedUserId;
+  String? _transferToUserId;
   var _busy = false;
   final Set<String> _selectedRefs = {};
+  Set<String>? _clipboard;
 
   @override
   Widget build(BuildContext context) {
     final users = ref.watch(usersProvider);
     final crmMenu = ref.watch(crmMenuProvider);
-    final menuSections = crmMenu.asData?.value;
-    final canToggleAll = !_busy && _selectedUserId != null && menuSections != null;
+    final sections = [
+      _prosmartSection(),
+      ...?crmMenu.asData?.value,
+    ];
+    final canToggleAll = !_busy && _selectedUserId != null && crmMenu.asData != null;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -39,7 +44,7 @@ class _AdminUserMenuPermissionsPageState
             SizedBox(
               width: 160,
               child: OutlinedButton(
-                onPressed: canToggleAll ? () => _selectAll(menuSections!) : null,
+                onPressed: canToggleAll ? () => _selectAll(sections) : null,
                 child: const Text('Tümünü Aç'),
               ),
             ),
@@ -98,15 +103,61 @@ class _AdminUserMenuPermissionsPageState
                   },
                 ),
                 const SizedBox(height: 12),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 140,
+                      child: OutlinedButton(
+                        onPressed: _busy || _selectedUserId == null ? null : _copyToClipboard,
+                        child: const Text('Kopyala'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 140,
+                      child: OutlinedButton(
+                        onPressed: _busy || _selectedUserId == null || _clipboard == null ? null : _pasteFromClipboard,
+                        child: const Text('Yapıştır'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: DropdownButtonFormField<String?>(
+                        initialValue: _transferToUserId,
+                        decoration: const InputDecoration(labelText: 'Aktarılacak kullanıcı'),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('Seçiniz')),
+                          for (final u in users)
+                            if (u.id != _selectedUserId)
+                              DropdownMenuItem(
+                                value: u.id,
+                                child: Text('${u.username} • ${u.displayName}'),
+                              ),
+                        ],
+                        onChanged: _busy ? null : (v) => setState(() => _transferToUserId = v),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 140,
+                      child: FilledButton.tonal(
+                        onPressed: _busy || _selectedUserId == null || _transferToUserId == null ? null : _transferToUser,
+                        child: const Text('Aktar'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 crmMenu.when(
-                  data: (sections) {
+                  data: (crmSections) {
                     if (_selectedUserId == null) {
                       return const Text('Önce kullanıcı seçiniz.');
                     }
 
+                    final allSections = [_prosmartSection(), ...crmSections];
                     return Column(
                       children: [
-                        for (final s in sections)
+                        for (final s in allSections)
                           _PermissionSection(
                             title: s.title,
                             nodes: s.nodes,
@@ -209,6 +260,42 @@ class _AdminUserMenuPermissionsPageState
     });
   }
 
+  CrmMenuSection _prosmartSection() {
+    return const CrmMenuSection(
+      title: 'Prosmart Menü',
+      nodes: [
+        CrmMenuNode(title: 'Dashboard', icon: Icons.dashboard_outlined, legacyRef: 'ps_dashboard'),
+        CrmMenuNode(title: 'Kasa İcmal', icon: Icons.receipt_long_outlined, legacyRef: 'ps_reconciliations'),
+        CrmMenuNode(title: 'Evrak', icon: Icons.upload_file_outlined, legacyRef: 'ps_documents'),
+        CrmMenuNode(title: 'Onay Bekleyenler', icon: Icons.verified_outlined, legacyRef: 'ps_pending_approvals'),
+        CrmMenuNode(title: 'Firma Tanımlama', icon: Icons.business_outlined, legacyRef: 'find_firma'),
+        CrmMenuNode(title: 'Şube Güncelleme', icon: Icons.storefront_outlined, legacyRef: 'insert_sube'),
+        CrmMenuNode(title: 'Birim Seti', icon: Icons.straighten_outlined, legacyRef: 'insert_birim_seti'),
+        CrmMenuNode(title: 'Hesap Dönemi', icon: Icons.date_range_outlined, legacyRef: 'insert_hesap_donem'),
+        CrmMenuNode(title: 'Gelir Merkezi', icon: Icons.account_balance_outlined, legacyRef: 'insert_gelir_merkezi'),
+        CrmMenuNode(title: 'Ödeme Türleri', icon: Icons.credit_card_outlined, legacyRef: 'insert_odeme_turu'),
+        CrmMenuNode(title: 'Masraf Tipleri', icon: Icons.payments_outlined, legacyRef: 'insert_masraf_tipleri'),
+        CrmMenuNode(title: 'Kasa', icon: Icons.receipt_long_outlined, legacyRef: 'insert_kasa_tanim'),
+        CrmMenuNode(title: 'İş İstasyonları', icon: Icons.point_of_sale_outlined, legacyRef: 'insert_istasyon'),
+        CrmMenuNode(title: 'Düşüm Deposu', icon: Icons.warehouse_outlined, legacyRef: 'insert_dusum_depo'),
+        CrmMenuNode(title: 'Min/Max Tanımı', icon: Icons.tune_outlined, legacyRef: 'min_max_tanimi'),
+        CrmMenuNode(title: 'Üretilmeyecek Ürünler', icon: Icons.block_outlined, legacyRef: 'insert_uretilmeyecek_urunler'),
+        CrmMenuNode(title: 'Ürünler', icon: Icons.shopping_bag_outlined, legacyRef: 'urun_tree'),
+        CrmMenuNode(title: 'Depolar', icon: Icons.warehouse_outlined, legacyRef: 'insert_depo'),
+        CrmMenuNode(title: 'Stok Hareketleri', icon: Icons.inventory_2_outlined, legacyRef: 'stok_haraketleri'),
+        CrmMenuNode(title: 'Eldeki Stok', icon: Icons.view_list_outlined, legacyRef: 'eldeki_stok'),
+        CrmMenuNode(title: 'Fatura', icon: Icons.request_quote_outlined, legacyRef: 'ps_inv_invoices'),
+        CrmMenuNode(title: 'Depo Sayım', icon: Icons.fact_check_outlined, legacyRef: 'insert_sayim_fisi'),
+        CrmMenuNode(title: 'Reçete', icon: Icons.menu_book_outlined, legacyRef: 'insert_recete'),
+        CrmMenuNode(title: 'Ana Grup Satış', icon: Icons.bar_chart_outlined, legacyRef: 'ps_report_ana_grup_satis'),
+        CrmMenuNode(title: 'Şifre Değiştirme', icon: Icons.password_outlined, legacyRef: 'update_sifre'),
+        CrmMenuNode(title: 'Kullanıcı Tanımlama', icon: Icons.people_outline, legacyRef: 'insert_kullanici'),
+        CrmMenuNode(title: 'Kullanıcı Yetkileri', icon: Icons.admin_panel_settings_outlined, legacyRef: 'insert_kullanici_yetki'),
+        CrmMenuNode(title: 'Ayarlar', icon: Icons.settings_outlined, legacyRef: 'ps_settings'),
+      ],
+    );
+  }
+
   void _selectAll(List<CrmMenuSection> sections) {
     final refs = <String>{};
     for (final s in sections) {
@@ -227,6 +314,52 @@ class _AdminUserMenuPermissionsPageState
     setState(() {
       _selectedRefs.clear();
     });
+  }
+
+  void _copyToClipboard() {
+    _clipboard = {..._selectedRefs};
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Kopyalandı (${_clipboard!.length})')),
+    );
+  }
+
+  void _pasteFromClipboard() {
+    final clip = _clipboard;
+    if (clip == null) return;
+    setState(() {
+      _selectedRefs
+        ..clear()
+        ..addAll(clip);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Yapıştırıldı (${clip.length})')),
+    );
+  }
+
+  Future<void> _transferToUser() async {
+    final toUserId = _transferToUserId;
+    if (toUserId == null) return;
+    setState(() => _busy = true);
+    try {
+      if (AppConfig.hasApi) {
+        final dio = ref.read(dioProvider);
+        await dio.put<Map<String, dynamic>>(
+          '/user-menu-permissions/$toUserId',
+          data: {'legacyRefs': _selectedRefs.toList()..sort()},
+        );
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Yetkiler aktarıldı.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aktarma başarısız.')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   List<String> _collectLeafRefs(CrmMenuNode node) {

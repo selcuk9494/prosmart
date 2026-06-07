@@ -32,6 +32,13 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final role = session?.role ?? UserRole.branchUser;
     final location = GoRouterState.of(context).matchedLocation;
+    final isManager = role == UserRole.manager;
+    final permissionsAsync = ref.watch(myMenuPermissionsProvider);
+    final allowedRefsLower = isManager
+        ? const <String>{}
+        : (permissionsAsync.asData?.value ?? const [])
+            .map((e) => e.toLowerCase())
+            .toSet();
 
     final pendingApprovals = ref.watch(pendingApprovalsCountProvider);
     final mismatches = ref.watch(mismatchesCountProvider);
@@ -45,6 +52,8 @@ class _AppShellState extends ConsumerState<AppShell> {
       role: role,
       pendingApprovals: pendingApprovals,
       mismatches: mismatches,
+      isManager: isManager,
+      allowedRefsLower: allowedRefsLower,
       ),
       ..._buildCrmMenuSections(crmMenu),
     ];
@@ -206,6 +215,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       subtitle: node.subtitle,
       icon: node.icon,
       route: node.route,
+      permissionRef: node.legacyRef ?? node.subtitle,
       enabled: true,
       children: node.children == null
           ? null
@@ -217,10 +227,31 @@ class _AppShellState extends ConsumerState<AppShell> {
     required UserRole role,
     required int pendingApprovals,
     required int mismatches,
+    required bool isManager,
+    required Set<String> allowedRefsLower,
   }) {
     final canManage = role == UserRole.manager;
     final canEditDefinitions = role == UserRole.manager || role == UserRole.accounting;
-    return [
+    bool _allowed(String? ref) {
+      if (isManager) return true;
+      final r = (ref ?? '').trim().toLowerCase();
+      if (r.isEmpty) return true;
+      return allowedRefsLower.contains(r);
+    }
+
+    List<_MenuItem> _filterByPermission(List<_MenuItem> items) {
+      final out = <_MenuItem>[];
+      for (final item in items) {
+        final filteredChildren = item.children == null ? null : _filterByPermission(item.children!);
+        final includeSelf = _allowed(item.permissionRef);
+        final include = includeSelf || (filteredChildren != null && filteredChildren.isNotEmpty);
+        if (!include) continue;
+        out.add(item.copyWith(children: filteredChildren));
+      }
+      return out;
+    }
+
+    final sections = [
       _MenuSection(
         title: 'Kasa Yönetimi',
         items: [
@@ -229,6 +260,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             subtitle: 'Genel durum',
             icon: Icons.dashboard_outlined,
             route: '/',
+            permissionRef: 'ps_dashboard',
           ),
           _MenuItem(
             title: 'Kasa İcmal',
@@ -237,12 +269,14 @@ class _AppShellState extends ConsumerState<AppShell> {
             route: '/reconciliations',
             badgeCount: mismatches > 0 ? mismatches : null,
             badgeTone: _BadgeTone.warning,
+            permissionRef: 'ps_reconciliations',
           ),
           const _MenuItem(
             title: 'Evrak',
             subtitle: 'Eksik evrak takibi',
             icon: Icons.upload_file_outlined,
             route: '/documents',
+            permissionRef: 'ps_documents',
           ),
           _MenuItem(
             title: 'Onay Bekleyenler',
@@ -252,6 +286,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             enabled: canManage,
             badgeCount: canManage && pendingApprovals > 0 ? pendingApprovals : null,
             badgeTone: _BadgeTone.danger,
+            permissionRef: 'ps_pending_approvals',
           ),
         ],
       ),
@@ -264,6 +299,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.business_outlined,
             route: '/crm/firms',
             enabled: canEditDefinitions,
+            permissionRef: 'find_firma',
           ),
           _MenuItem(
             title: 'Şube Güncelleme',
@@ -271,18 +307,21 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.storefront_outlined,
             route: '/crm/branches',
             enabled: canManage,
+            permissionRef: 'insert_sube',
           ),
           const _MenuItem(
             title: 'Birim Seti',
             subtitle: 'Birim tanımları',
             icon: Icons.straighten_outlined,
             route: '/crm/unit-sets',
+            permissionRef: 'insert_birim_seti',
           ),
           const _MenuItem(
             title: 'Hesap Dönemi',
             subtitle: 'Dönem tanımları',
             icon: Icons.date_range_outlined,
             route: '/crm/account-periods',
+            permissionRef: 'insert_hesap_donem',
           ),
           _MenuItem(
             title: 'Gelir Merkezi',
@@ -290,6 +329,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.account_balance_outlined,
             route: '/crm/income-centers',
             enabled: canEditDefinitions,
+            permissionRef: 'insert_gelir_merkezi',
           ),
           _MenuItem(
             title: 'Ödeme Türleri',
@@ -297,6 +337,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.credit_card_outlined,
             route: '/crm/payment-types',
             enabled: canEditDefinitions,
+            permissionRef: 'insert_odeme_turu',
           ),
           _MenuItem(
             title: 'Masraf Tipleri',
@@ -304,6 +345,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.payments_outlined,
             route: '/crm/expense-types',
             enabled: canEditDefinitions,
+            permissionRef: 'insert_masraf_tipleri',
           ),
           _MenuItem(
             title: 'Kasa',
@@ -311,12 +353,14 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.receipt_long_outlined,
             route: '/crm/cash-registers',
             enabled: canEditDefinitions,
+            permissionRef: 'insert_kasa_tanim',
           ),
           const _MenuItem(
             title: 'İş İstasyonları',
             subtitle: 'POS/terminal',
             icon: Icons.point_of_sale_outlined,
             route: '/crm/workstations',
+            permissionRef: 'insert_istasyon',
           ),
           _MenuItem(
             title: 'Düşüm Deposu',
@@ -324,6 +368,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.warehouse_outlined,
             route: '/crm/waste-warehouse',
             enabled: canEditDefinitions,
+            permissionRef: 'insert_dusum_depo',
           ),
           _MenuItem(
             title: 'Min/Max Tanımı',
@@ -331,6 +376,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.tune_outlined,
             route: '/crm/min-max',
             enabled: canEditDefinitions,
+            permissionRef: 'min_max_tanimi',
           ),
           _MenuItem(
             title: 'Üretilmeyecek Ürünler',
@@ -338,6 +384,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.block_outlined,
             route: '/crm/unproduced-products',
             enabled: canEditDefinitions,
+            permissionRef: 'insert_uretilmeyecek_urunler',
           ),
         ],
       ),
@@ -349,48 +396,56 @@ class _AppShellState extends ConsumerState<AppShell> {
             subtitle: 'Ürün kartları',
             icon: Icons.shopping_bag_outlined,
             route: '/inv/products',
+            permissionRef: 'urun_tree',
           ),
           _MenuItem(
             title: 'Depolar',
             subtitle: 'Depo tanımları',
             icon: Icons.warehouse_outlined,
             route: '/inv/warehouses',
+            permissionRef: 'insert_depo',
           ),
           _MenuItem(
             title: 'Stok Hareketleri',
             subtitle: 'Giriş/çıkış fişleri',
             icon: Icons.inventory_2_outlined,
             route: '/inv/transactions',
+            permissionRef: 'stok_haraketleri',
           ),
           _MenuItem(
             title: 'Eldeki Stok',
             subtitle: 'Anlık stok',
             icon: Icons.view_list_outlined,
             route: '/inv/onhand',
+            permissionRef: 'eldeki_stok',
           ),
           _MenuItem(
             title: 'Fatura',
             subtitle: 'Gelen/çıkan fatura',
             icon: Icons.request_quote_outlined,
             route: '/inv/invoices',
+            permissionRef: 'ps_inv_invoices',
           ),
           _MenuItem(
             title: 'Depo Sayım',
             subtitle: 'Sayım ve farklar',
             icon: Icons.fact_check_outlined,
             route: '/inv/counts',
+            permissionRef: 'insert_sayim_fisi',
           ),
           _MenuItem(
             title: 'Reçete',
             subtitle: 'Ürün reçeteleri',
             icon: Icons.menu_book_outlined,
             route: '/inv/recipes',
+            permissionRef: 'insert_recete',
           ),
           _MenuItem(
             title: 'Maliyet Analizi',
             subtitle: 'Food cost / rapor',
             icon: Icons.analytics_outlined,
             enabled: false,
+            permissionRef: 'ps_cost_analysis',
           ),
         ],
       ),
@@ -402,18 +457,21 @@ class _AppShellState extends ConsumerState<AppShell> {
             subtitle: 'OmniRapor',
             icon: Icons.bar_chart_outlined,
             route: '/reports/ana-grup-satis',
+            permissionRef: 'ps_report_ana_grup_satis',
           ),
           _MenuItem(
             title: 'Kasa Raporları',
             subtitle: 'PDF/Excel çıktılar',
             icon: Icons.summarize_outlined,
             enabled: false,
+            permissionRef: 'ps_cash_reports',
           ),
           _MenuItem(
             title: 'Stok Raporları',
             subtitle: 'Giriş/çıkış',
             icon: Icons.query_stats_outlined,
             enabled: false,
+            permissionRef: 'ps_stock_reports',
           ),
         ],
       ),
@@ -425,6 +483,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             subtitle: 'Kullanıcı şifresi',
             icon: Icons.password_outlined,
             route: '/account/password',
+            permissionRef: 'update_sifre',
           ),
         ],
       ),
@@ -437,22 +496,30 @@ class _AppShellState extends ConsumerState<AppShell> {
               subtitle: 'Kullanıcı/rol',
               icon: Icons.people_outline,
               route: '/admin/users',
+              permissionRef: 'insert_kullanici',
             ),
             _MenuItem(
               title: 'Kullanıcı Yetkileri',
               subtitle: 'Menü yetkisi',
               icon: Icons.admin_panel_settings_outlined,
               route: '/admin/user-menu-permissions',
+              permissionRef: 'insert_kullanici_yetki',
             ),
             _MenuItem(
               title: 'Ayarlar',
               subtitle: 'Şube/ödeme/masraf',
               icon: Icons.settings_outlined,
               route: '/settings',
+              permissionRef: 'ps_settings',
             ),
           ],
         ),
     ];
+
+    return [
+      for (final s in sections)
+        s.copyWith(items: _filterByPermission(s.items)),
+    ].where((s) => s.items.isNotEmpty).toList();
   }
 
   String _roleLabel(UserRole role) {
@@ -758,6 +825,7 @@ class _MenuItem {
     required this.icon,
     this.subtitle,
     this.route,
+    this.permissionRef,
     this.enabled = true,
     this.badgeCount,
     this.badgeTone,
@@ -768,6 +836,7 @@ class _MenuItem {
   final String? subtitle;
   final IconData icon;
   final String? route;
+  final String? permissionRef;
   final bool enabled;
   final int? badgeCount;
   final _BadgeTone? badgeTone;
@@ -778,6 +847,7 @@ class _MenuItem {
     String? subtitle,
     IconData? icon,
     String? route,
+    String? permissionRef,
     bool? enabled,
     int? badgeCount,
     _BadgeTone? badgeTone,
@@ -788,6 +858,7 @@ class _MenuItem {
       subtitle: subtitle ?? this.subtitle,
       icon: icon ?? this.icon,
       route: route ?? this.route,
+      permissionRef: permissionRef ?? this.permissionRef,
       enabled: enabled ?? this.enabled,
       badgeCount: badgeCount ?? this.badgeCount,
       badgeTone: badgeTone ?? this.badgeTone,

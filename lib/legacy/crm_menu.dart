@@ -16,14 +16,24 @@ final crmMenuProvider =
   if (!AppConfig.hasApi || session == null) return base;
   if (session.role == UserRole.manager) return base;
 
-  final allowed = await _loadMyMenuPermissions(ref);
-  if (allowed == null || allowed.isEmpty) return const [];
+  final allowed = await ref.watch(myMenuPermissionsProvider.future);
+  if (allowed.isEmpty) return const [];
   final allowedSet = allowed.map((e) => e.toLowerCase()).toSet();
 
   return [
     for (final s in base)
       s.copyWith(nodes: _filterNodesByPermission(s.nodes, allowedSet)),
   ].where((s) => s.nodes.isNotEmpty).toList();
+});
+
+final myMenuPermissionsProvider = FutureProvider<List<String>>((ref) async {
+  final session = ref.watch(authControllerProvider).asData?.value;
+  if (!AppConfig.hasApi || session == null) return const [];
+  if (session.role == UserRole.manager) return const [];
+  final dio = ref.read(dioProvider);
+  final res = await dio.get<List<dynamic>>('/me/menu-permissions');
+  final data = res.data ?? const [];
+  return [for (final x in data) x.toString()];
 });
 
 Future<List<CrmMenuSection>> loadCrmMenu() async {
@@ -93,17 +103,6 @@ List<CrmMenuNode> _parseMenus(XmlElement element) {
     );
   }
   return result;
-}
-
-Future<List<String>?> _loadMyMenuPermissions(Ref ref) async {
-  try {
-    final dio = ref.read(dioProvider);
-    final res = await dio.get<List<dynamic>>('/me/menu-permissions');
-    final data = res.data ?? const [];
-    return [for (final x in data) x.toString()];
-  } catch (_) {
-    return null;
-  }
 }
 
 List<CrmMenuNode> _filterNodesByPermission(
