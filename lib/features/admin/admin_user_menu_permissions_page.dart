@@ -25,6 +25,8 @@ class _AdminUserMenuPermissionsPageState
   Widget build(BuildContext context) {
     final users = ref.watch(usersProvider);
     final crmMenu = ref.watch(crmMenuProvider);
+    final menuSections = crmMenu.asData?.value;
+    final canToggleAll = !_busy && _selectedUserId != null && menuSections != null;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -34,6 +36,22 @@ class _AdminUserMenuPermissionsPageState
             Text('Kullanıcı Menü Yetkilendirme',
                 style: Theme.of(context).textTheme.titleLarge),
             const Spacer(),
+            SizedBox(
+              width: 160,
+              child: OutlinedButton(
+                onPressed: canToggleAll ? () => _selectAll(menuSections!) : null,
+                child: const Text('Tümünü Aç'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: 160,
+              child: OutlinedButton(
+                onPressed: _busy || _selectedUserId == null ? null : _clearAll,
+                child: const Text('Tümünü Kapat'),
+              ),
+            ),
+            const SizedBox(width: 10),
             SizedBox(
               width: 140,
               child: FilledButton(
@@ -191,6 +209,26 @@ class _AdminUserMenuPermissionsPageState
     });
   }
 
+  void _selectAll(List<CrmMenuSection> sections) {
+    final refs = <String>{};
+    for (final s in sections) {
+      for (final n in s.nodes) {
+        refs.addAll(_collectLeafRefs(n));
+      }
+    }
+    setState(() {
+      _selectedRefs
+        ..clear()
+        ..addAll(refs);
+    });
+  }
+
+  void _clearAll() {
+    setState(() {
+      _selectedRefs.clear();
+    });
+  }
+
   List<String> _collectLeafRefs(CrmMenuNode node) {
     if (node.children == null || node.children!.isEmpty) {
       final ref = node.legacyRef ?? node.subtitle ?? '';
@@ -310,4 +348,3 @@ class _PermissionNode extends StatelessWidget {
     return out;
   }
 }
-
