@@ -1,0 +1,19 @@
+{
+  "name": "prosmart-server",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:remote": "PGHOST=185.206.71.200 PGPORT=5433 PGUSER=postgres PGDATABASE=prosmart APPLY_SCHEMA=1 PORT=8080 node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "pg": "^8.16.3",
+    "tesseract.js": "^7.0.0"
+  }
+}
