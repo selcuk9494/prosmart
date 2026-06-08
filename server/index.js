@@ -72,7 +72,11 @@ app.use(
 app.options('*', cors({ origin: '*' }));
 
 app.get('/', (req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').toString() || null,
+    deployedAt: (process.env.VERCEL_DEPLOYMENT_ID ?? '').toString() || null,
+  });
 });
 
 app.use((req, res, next) => {
@@ -244,7 +248,11 @@ app.get(
   '/health',
   asyncRoute(async (req, res) => {
     const r = await queryOne('select 1 as ok', []);
-    res.json({ ok: r?.ok === 1 });
+    res.json({
+      ok: r?.ok === 1,
+      commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').toString() || null,
+      deployedAt: (process.env.VERCEL_DEPLOYMENT_ID ?? '').toString() || null,
+    });
   }),
 );
 
