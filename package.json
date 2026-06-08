@@ -5,7 +5,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "vercel-build": "git clone --depth 1 https://github.com/flutter/flutter.git -b stable flutter && export PATH=\"$PWD/flutter/bin:$PATH\" && flutter --version && flutter config --no-analytics --enable-web && flutter pub get && bash -lc 'set -o pipefail; flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL 2>&1 | tail -n 250'",
+    "vercel-build": "bash -lc 'set -euo pipefail\nCACHE_DIR=\"$PWD/.vercel/cache\"\nFLUTTER_DIR=\"$CACHE_DIR/flutter\"\nPUB_CACHE_DIR=\"$CACHE_DIR/pub-cache\"\nmkdir -p \"$CACHE_DIR\"\n\nif [ ! -d \"$FLUTTER_DIR/.git\" ]; then\n  rm -rf \"$FLUTTER_DIR\"\n  git clone --depth 1 https://github.com/flutter/flutter.git -b stable \"$FLUTTER_DIR\"\nfi\n\nexport PATH=\"$FLUTTER_DIR/bin:$PATH\"\nexport PUB_CACHE=\"$PUB_CACHE_DIR\"\n\nflutter --version\nflutter config --no-analytics --enable-web\nflutter pub get\n\nset -o pipefail\nflutter build web --release --dart-define=API_BASE_URL=${API_BASE_URL-} 2>&1 | tail -n 250\n'",
     "build": "npm run vercel-build"
   }
 }
