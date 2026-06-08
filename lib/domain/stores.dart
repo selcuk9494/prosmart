@@ -2235,8 +2235,18 @@ final posLiveDailyTotalProvider =
 final posPullStatusesProvider = FutureProvider<List<PosPullStatus>>((ref) async {
   if (!AppConfig.hasApi) return const [];
   final dio = ref.read(dioProvider);
-  final res = await dio.get<List<dynamic>>('/pos/pull/status');
-  final data = res.data ?? const [];
+  List<dynamic> data = const [];
+  try {
+    final res = await dio.get<List<dynamic>>('/pos/pull/status');
+    data = res.data ?? const [];
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 404) {
+      final res = await dio.get<List<dynamic>>('/api/pos/pull/status');
+      data = res.data ?? const [];
+    } else {
+      rethrow;
+    }
+  }
   return [
     for (final raw in data)
       if (raw is Map<String, dynamic>)

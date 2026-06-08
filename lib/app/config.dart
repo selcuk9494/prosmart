@@ -7,7 +7,7 @@ class AppConfig {
   static String get apiBaseUrl {
     final v = _apiBaseUrlEnv.trim();
     if (v.isNotEmpty) return v;
-    if (kReleaseMode) return 'https://prosmart-ten.vercel.app';
+    if (kReleaseMode && !kIsWeb) return 'https://prosmart-ten.vercel.app';
     return '';
   }
 
