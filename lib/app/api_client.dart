@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/auth_controller.dart';
@@ -8,9 +9,10 @@ import 'config.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final baseUrl = AppConfig.apiBaseUrl.trim();
+  final useVercelSameOriginApi = kIsWeb && kReleaseMode && baseUrl.isEmpty;
   final dio = Dio(
     BaseOptions(
-      baseUrl: baseUrl,
+      baseUrl: useVercelSameOriginApi ? '' : baseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
@@ -24,6 +26,16 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
+        if (useVercelSameOriginApi) {
+          final p = (options.path).toString();
+          if (!p.startsWith('/api/')) {
+            if (p.startsWith('/')) {
+              options.path = '/api$p';
+            } else {
+              options.path = '/api/$p';
+            }
+          }
+        }
         final session = ref.read(authControllerProvider).asData?.value;
         final token = session?.accessToken;
         if (token != null && token.isNotEmpty) {
@@ -36,6 +48,7 @@ final dioProvider = Provider<Dio>((ref) {
         final path = e.requestOptions.path;
         if (status == 401 &&
             !path.startsWith('/auth/login') &&
+            !path.startsWith('/api/auth/login') &&
             !path.startsWith('/api/TokenAuth/Authenticate')) {
           final session = ref.read(authControllerProvider).asData?.value;
           if (session != null) {

@@ -176,6 +176,42 @@ async function mapLimit(items, limit, fn) {
   return results;
 }
 
+async function getAutomationUserId() {
+  const row = await queryOne(
+    `
+    select id
+    from app_users
+    where is_active = true and role in ('manager', 'accounting')
+    order by case when role = 'manager' then 0 else 1 end, created_at asc
+    limit 1
+    `,
+    [],
+  );
+  return row?.id?.toString() || null;
+}
+
+async function ensureCashReconciliation({ branchId, businessDate, createdByUserId }) {
+  const row = await queryOne(
+    `
+    insert into cash_reconciliations(branch_id, business_date, expected_sales_total, created_by_user_id)
+    values (
+      $1::uuid,
+      $2::date,
+      coalesce(
+        (select gross_total from daily_sales where branch_id = $1 and business_date = $2::date limit 1),
+        0
+      ),
+      $3::uuid
+    )
+    on conflict (branch_id, business_date)
+    do update set updated_at = now()
+    returning id
+    `,
+    [branchId, businessDate, createdByUserId],
+  );
+  return row?.id?.toString() || null;
+}
+
 function toMoney(value) {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
@@ -2222,6 +2258,8 @@ app.get(
     const branchIdFilter = (req.query?.branchId ?? '').toString().trim() || null;
     const today = istanbulDateString(0);
     const yesterday = istanbulDateString(-1);
+    const automationUserId = await getAutomationUserId();
+    if (!automationUserId) return res.status(503).json({ error: 'NO_AUTOMATION_USER' });
 
     const branches = await queryAll(
       `
@@ -2253,6 +2291,7 @@ app.get(
         branchId,
         ok: true,
         pulled: [],
+        reconciliation: null,
         errors: [],
       };
 
@@ -2320,6 +2359,33 @@ app.get(
           date: today,
           error: (e?.code ?? 'PULL_FAILED').toString(),
           message: (e?.message ?? 'PULL_FAILED').toString(),
+        });
+      }
+
+      try {
+        const id = await ensureCashReconciliation({
+          branchId,
+          businessDate: today,
+          createdByUserId: automationUserId,
+        });
+        r.reconciliation = { ok: Boolean(id), id };
+        if (!id) {
+          r.ok = false;
+          r.errors.push({
+            step: 'reconciliation',
+            date: today,
+            error: 'RECONCILIATION_FAILED',
+            message: 'İcmal oluşturulamadı',
+          });
+        }
+      } catch (e) {
+        r.ok = false;
+        r.reconciliation = { ok: false, id: null };
+        r.errors.push({
+          step: 'reconciliation',
+          date: today,
+          error: (e?.code ?? 'RECONCILIATION_FAILED').toString(),
+          message: (e?.message ?? 'RECONCILIATION_FAILED').toString(),
         });
       }
 

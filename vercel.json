@@ -5,9 +5,17 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "build/web" }
+    },
+    {
+      "src": "server/api/index.js",
+      "use": "@vercel/node"
     }
   ],
+  "crons": [
+    { "path": "/api/cron/pos/pull", "schedule": "*/15 * * * *" }
+  ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "/server/api/index.js" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
