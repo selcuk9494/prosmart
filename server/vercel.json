@@ -5,6 +5,9 @@
       "memory": 1024
     }
   },
+  "crons": [
+    { "path": "/cron/pos/pull", "schedule": "*/15 * * * *" }
+  ],
   "routes": [
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]

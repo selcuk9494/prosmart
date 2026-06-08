@@ -495,6 +495,23 @@ class PosDailySalesGroup {
 }
 
 @immutable
+class PosPullStatus {
+  const PosPullStatus({
+    required this.branchId,
+    required this.branchName,
+    required this.isActive,
+    required this.lastPulledAt,
+    required this.lastBusinessDate,
+  });
+
+  final String branchId;
+  final String branchName;
+  final bool isActive;
+  final DateTime? lastPulledAt;
+  final DateTime? lastBusinessDate;
+}
+
+@immutable
 class EndOfDayReport {
   const EndOfDayReport({
     required this.id,

@@ -137,6 +137,45 @@ function asDateString(value) {
   return v;
 }
 
+function dateStringInTz(date, timeZone) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    const iso = new Date(date).toISOString();
+    return iso.slice(0, 10);
+  }
+}
+
+function istanbulDateString(offsetDays = 0) {
+  const base = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  return dateStringInTz(base, 'Europe/Istanbul');
+}
+
+async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (true) {
+      const i = nextIndex;
+      nextIndex++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i], i);
+    }
+  };
+
+  const workers = [];
+  const n = Math.max(1, Math.min(limit, items.length));
+  for (let i = 0; i < n; i++) workers.push(worker());
+  await Promise.all(workers);
+  return results;
+}
+
 function toMoney(value) {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
@@ -1679,32 +1718,43 @@ app.post(
     const cfg = await getBranchDataSourceConfig(branchId);
     if (!cfg) return res.status(404).json({ error: 'BRANCH_DB_NOT_CONFIGURED' });
     if (!cfg.isActive) return res.status(400).json({ error: 'BRANCH_DB_INACTIVE' });
-
-    const ssl = cfg.ssl ? { rejectUnauthorized: false } : false;
-    const branchPool = new pg.Pool({
-      host: cfg.host,
-      port: Number(cfg.port ?? 5432),
-      user: cfg.username,
-      password: (cfg.password ?? '').toString(),
-      database: cfg.database,
-      max: 1,
-      idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 12_000,
-      ssl,
+    const out = await pullBranchDailyPos({
+      branchId,
+      businessDate,
+      source,
+      businessDayStartHour,
+      cfg,
     });
+    res.json(out);
+  }),
+);
 
-    let kasaList = [];
-    const salesByKasa = new Map();
-    const paymentsAgg = [];
-    const productsAgg = [];
-    const adjustmentsAgg = [];
-    const groupsAgg = [];
-    const assignedKasaNos = await _getAssignedKasaNos(branchId);
-    const assignedKasaNosParam = assignedKasaNos.length ? assignedKasaNos : null;
+async function pullBranchDailyPos({ branchId, businessDate, source, businessDayStartHour, cfg }) {
+  const ssl = cfg.ssl ? { rejectUnauthorized: false } : false;
+  const branchPool = new pg.Pool({
+    host: cfg.host,
+    port: Number(cfg.port ?? 5432),
+    user: cfg.username,
+    password: (cfg.password ?? '').toString(),
+    database: cfg.database,
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 12_000,
+    ssl,
+  });
+
+  let kasaList = [];
+  const salesByKasa = new Map();
+  const paymentsAgg = [];
+  const productsAgg = [];
+  const adjustmentsAgg = [];
+  const groupsAgg = [];
+  const assignedKasaNos = await _getAssignedKasaNos(branchId);
+  const assignedKasaNosParam = assignedKasaNos.length ? assignedKasaNos : null;
+  try {
     try {
-      try {
-        const r = await branchPool.query(
-          `
+      const r = await branchPool.query(
+        `
           select
             kasa,
             coalesce(sum(coalesce(otutar,0)+coalesce(iskonto,0)),0) as gross_total
@@ -1714,53 +1764,47 @@ app.post(
           group by kasa
           order by kasa asc
           `,
+        [businessDate, businessDayStartHour, assignedKasaNosParam],
+      );
+      for (const row of r.rows ?? []) {
+        const kasa = row.kasa;
+        const registerCode = _registerCodeFromKasa(kasa);
+        if (!registerCode) continue;
+        const val = _parseMoneyLoose(row.gross_total);
+        salesByKasa.set(registerCode, (salesByKasa.get(registerCode) ?? 0) + val);
+      }
+    } catch {}
+
+    if (!salesByKasa.size) {
+      try {
+        const r = await branchPool.query(
+          `
+            select kasa, toplam, z_tutar, ykt
+            from kasa_raporu
+            where (tarih::timestamp - ($2::int * interval '1 hour'))::date = $1::date
+              and ($3::int[] is null or kasa = any($3::int[]))
+            `,
           [businessDate, businessDayStartHour, assignedKasaNosParam],
         );
         for (const row of r.rows ?? []) {
           const kasa = row.kasa;
           const registerCode = _registerCodeFromKasa(kasa);
           if (!registerCode) continue;
-          const val = _parseMoneyLoose(row.gross_total);
+          const candidates = [
+            _parseMoneyLoose(row.toplam),
+            _parseMoneyLoose(row.z_tutar),
+            _parseMoneyLoose(row.ykt),
+          ];
+          const val = candidates.find((n) => n > 0) ?? candidates.find((n) => n !== 0) ?? 0;
           salesByKasa.set(registerCode, (salesByKasa.get(registerCode) ?? 0) + val);
         }
       } catch {}
+    }
 
-      if (!salesByKasa.size) {
-        try {
-          const r = await branchPool.query(
-            `
-            select kasa, toplam, z_tutar, ykt
-            from kasa_raporu
-            where (tarih::timestamp - ($2::int * interval '1 hour'))::date = $1::date
-              and ($3::int[] is null or kasa = any($3::int[]))
-            `,
-            [businessDate, businessDayStartHour, assignedKasaNosParam],
-          );
-          for (const row of r.rows ?? []) {
-            const kasa = row.kasa;
-            const registerCode = _registerCodeFromKasa(kasa);
-            if (!registerCode) continue;
-            const candidates = [
-              _parseMoneyLoose(row.toplam),
-              _parseMoneyLoose(row.z_tutar),
-              _parseMoneyLoose(row.ykt),
-            ];
-            const val =
-              candidates.find((n) => n > 0) ??
-              candidates.find((n) => n !== 0) ??
-              0;
-            salesByKasa.set(
-              registerCode,
-              (salesByKasa.get(registerCode) ?? 0) + val,
-            );
-          }
-        } catch {}
-      }
-
-      if (!salesByKasa.size) {
-        try {
-          const r = await branchPool.query(
-            `
+    if (!salesByKasa.size) {
+      try {
+        const r = await branchPool.query(
+          `
             select
               kasa,
               coalesce(sum(coalesce(tutar,0)),0) as gross_total
@@ -1772,49 +1816,49 @@ app.post(
             group by kasa
             order by kasa asc
             `,
-            [businessDate, businessDayStartHour, assignedKasaNosParam],
-          );
-          for (const row of r.rows ?? []) {
-            const kasa = row.kasa;
-            const registerCode = _registerCodeFromKasa(kasa);
-            if (!registerCode) continue;
-            const val = _parseMoneyLoose(row.gross_total);
-            salesByKasa.set(registerCode, (salesByKasa.get(registerCode) ?? 0) + val);
-          }
-        } catch {}
-      }
+          [businessDate, businessDayStartHour, assignedKasaNosParam],
+        );
+        for (const row of r.rows ?? []) {
+          const kasa = row.kasa;
+          const registerCode = _registerCodeFromKasa(kasa);
+          if (!registerCode) continue;
+          const val = _parseMoneyLoose(row.gross_total);
+          salesByKasa.set(registerCode, (salesByKasa.get(registerCode) ?? 0) + val);
+        }
+      } catch {}
+    }
 
-      if (salesByKasa.size) {
-        kasaList = [...salesByKasa.keys()]
-          .map((code) => {
-            const n = Number.parseInt(code.replace('KASA-', ''), 10);
-            return Number.isFinite(n) ? n : null;
-          })
-          .filter((x) => x != null);
-      } else {
-        try {
-          const r = await branchPool.query(
-            `
+    if (salesByKasa.size) {
+      kasaList = [...salesByKasa.keys()]
+        .map((code) => {
+          const n = Number.parseInt(code.replace('KASA-', ''), 10);
+          return Number.isFinite(n) ? n : null;
+        })
+        .filter((x) => x != null);
+    } else {
+      try {
+        const r = await branchPool.query(
+          `
             select distinct kasa
             from ads_odeme
             where (raptar - ($2::int * interval '1 hour'))::date = $1::date
               and ($3::int[] is null or kasa = any($3::int[]))
             order by kasa asc
             `,
-            [businessDate, businessDayStartHour, assignedKasaNosParam],
-          );
-          kasaList = (r.rows ?? [])
-            .map((x) => Number.parseInt((x.kasa ?? '').toString(), 10))
-            .filter((n) => Number.isFinite(n));
-        } catch {}
-      }
+          [businessDate, businessDayStartHour, assignedKasaNosParam],
+        );
+        kasaList = (r.rows ?? [])
+          .map((x) => Number.parseInt((x.kasa ?? '').toString(), 10))
+          .filter((n) => Number.isFinite(n));
+      } catch {}
+    }
 
-      const kasaNos = assignedKasaNos.length ? assignedKasaNos : (kasaList.length ? kasaList : null);
+    const kasaNos = assignedKasaNos.length ? assignedKasaNos : (kasaList.length ? kasaList : null);
 
-      if (kasaNos) {
-        try {
-          const r = await branchPool.query(
-            `
+    if (kasaNos) {
+      try {
+        const r = await branchPool.query(
+          `
             select
               kasa,
               coalesce(sum(coalesce(iskonto,0)),0) as total,
@@ -1824,23 +1868,23 @@ app.post(
             group by kasa
             order by kasa asc
             `,
-            [businessDate, businessDayStartHour, kasaNos],
-          );
-          for (const row of r.rows ?? []) {
-            const registerCode = _registerCodeFromKasa(row.kasa);
-            if (!registerCode) continue;
-            adjustmentsAgg.push({
-              registerCode,
-              kind: 'discount',
-              amount: _parseMoneyLoose(row.total),
-              count: Number.parseInt((row.count ?? 0).toString(), 10) || 0,
-            });
-          }
-        } catch {}
+          [businessDate, businessDayStartHour, kasaNos],
+        );
+        for (const row of r.rows ?? []) {
+          const registerCode = _registerCodeFromKasa(row.kasa);
+          if (!registerCode) continue;
+          adjustmentsAgg.push({
+            registerCode,
+            kind: 'discount',
+            amount: _parseMoneyLoose(row.total),
+            count: Number.parseInt((row.count ?? 0).toString(), 10) || 0,
+          });
+        }
+      } catch {}
 
-        try {
-          const r = await branchPool.query(
-            `
+      try {
+        const r = await branchPool.query(
+          `
             select
               kasa,
               coalesce(adtur, 0) as adtur,
@@ -1851,25 +1895,25 @@ app.post(
             group by kasa, coalesce(adtur, 0)
             order by kasa asc, coalesce(adtur, 0) asc
             `,
-            [businessDate, businessDayStartHour, kasaNos],
-          );
-          for (const row of r.rows ?? []) {
-            const registerCode = _registerCodeFromKasa(row.kasa);
-            if (!registerCode) continue;
-            const adtur = Number.parseInt((row.adtur ?? 0).toString(), 10) || 0;
-            const groupCode = adtur === 1 ? 'paket' : adtur === 3 ? 'hizli' : 'adisyon';
-            groupsAgg.push({
-              registerCode,
-              groupCode,
-              orderCount: Number.parseInt((row.order_count ?? 0).toString(), 10) || 0,
-              grossTotal: _parseMoneyLoose(row.gross_total),
-            });
-          }
-        } catch {}
+          [businessDate, businessDayStartHour, kasaNos],
+        );
+        for (const row of r.rows ?? []) {
+          const registerCode = _registerCodeFromKasa(row.kasa);
+          if (!registerCode) continue;
+          const adtur = Number.parseInt((row.adtur ?? 0).toString(), 10) || 0;
+          const groupCode = adtur === 1 ? 'paket' : adtur === 3 ? 'hizli' : 'adisyon';
+          groupsAgg.push({
+            registerCode,
+            groupCode,
+            orderCount: Number.parseInt((row.order_count ?? 0).toString(), 10) || 0,
+            grossTotal: _parseMoneyLoose(row.gross_total),
+          });
+        }
+      } catch {}
 
-        try {
-          const r = await branchPool.query(
-            `
+      try {
+        const r = await branchPool.query(
+          `
             select
               kasa,
               sturu,
@@ -1880,26 +1924,27 @@ app.post(
             group by kasa, sturu
             order by kasa asc, sturu asc
             `,
-            [businessDate, businessDayStartHour, kasaNos],
-          );
-          for (const row of r.rows ?? []) {
-            const registerCode = _registerCodeFromKasa(row.kasa);
-            if (!registerCode) continue;
-            const sturu = Number.parseInt((row.sturu ?? 0).toString(), 10) || 0;
-            const kind = sturu === 1 ? 'comp' : sturu === 2 ? 'refund' : sturu === 4 ? 'cancel' : null;
-            if (!kind) continue;
-            adjustmentsAgg.push({
-              registerCode,
-              kind,
-              amount: _parseMoneyLoose(row.total),
-              count: Number.parseInt((row.count ?? 0).toString(), 10) || 0,
-            });
-          }
-        } catch {}
+          [businessDate, businessDayStartHour, kasaNos],
+        );
+        for (const row of r.rows ?? []) {
+          const registerCode = _registerCodeFromKasa(row.kasa);
+          if (!registerCode) continue;
+          const sturu = Number.parseInt((row.sturu ?? 0).toString(), 10) || 0;
+          const kind =
+            sturu === 1 ? 'comp' : sturu === 2 ? 'refund' : sturu === 4 ? 'cancel' : null;
+          if (!kind) continue;
+          adjustmentsAgg.push({
+            registerCode,
+            kind,
+            amount: _parseMoneyLoose(row.total),
+            count: Number.parseInt((row.count ?? 0).toString(), 10) || 0,
+          });
+        }
+      } catch {}
 
-        try {
-          const r = await branchPool.query(
-            `
+      try {
+        const r = await branchPool.query(
+          `
             with per_ads as (
               select
                 h.kasano as kasa,
@@ -1917,23 +1962,23 @@ app.post(
             group by kasa
             order by kasa asc
             `,
-            [businessDate, businessDayStartHour, kasaNos],
-          );
-          for (const row of r.rows ?? []) {
-            const registerCode = _registerCodeFromKasa(row.kasa);
-            if (!registerCode) continue;
-            adjustmentsAgg.push({
-              registerCode,
-              kind: 'debt',
-              amount: _parseMoneyLoose(row.total),
-              count: Number.parseInt((row.count ?? 0).toString(), 10) || 0,
-            });
-          }
-        } catch {}
+          [businessDate, businessDayStartHour, kasaNos],
+        );
+        for (const row of r.rows ?? []) {
+          const registerCode = _registerCodeFromKasa(row.kasa);
+          if (!registerCode) continue;
+          adjustmentsAgg.push({
+            registerCode,
+            kind: 'debt',
+            amount: _parseMoneyLoose(row.total),
+            count: Number.parseInt((row.count ?? 0).toString(), 10) || 0,
+          });
+        }
+      } catch {}
 
-        try {
-          const r = await branchPool.query(
-            `
+      try {
+        const r = await branchPool.query(
+          `
             select
               kasa,
               coalesce(otip, 0) as otip,
@@ -1943,23 +1988,23 @@ app.post(
             group by kasa, coalesce(otip, 0)
             order by kasa asc, otip asc
             `,
-            [businessDate, businessDayStartHour, kasaNos],
-          );
-          for (const row of r.rows ?? []) {
-            const registerCode = _registerCodeFromKasa(row.kasa);
-            if (!registerCode) continue;
-            const paymentCode = (row.otip ?? 0).toString();
-            paymentsAgg.push({
-              registerCode,
-              paymentCode,
-              amount: _parseMoneyLoose(row.total),
-            });
-          }
-        } catch {}
+          [businessDate, businessDayStartHour, kasaNos],
+        );
+        for (const row of r.rows ?? []) {
+          const registerCode = _registerCodeFromKasa(row.kasa);
+          if (!registerCode) continue;
+          const paymentCode = (row.otip ?? 0).toString();
+          paymentsAgg.push({
+            registerCode,
+            paymentCode,
+            amount: _parseMoneyLoose(row.total),
+          });
+        }
+      } catch {}
 
-        try {
-          const r = await branchPool.query(
-            `
+      try {
+        const r = await branchPool.query(
+          `
             select
               a.kasa,
               a.pluid,
@@ -1973,71 +2018,71 @@ app.post(
             order by coalesce(sum(coalesce(a.tutar,0)),0) desc
             limit 500
             `,
-            [businessDate, businessDayStartHour, kasaNos],
-          );
-          for (const row of r.rows ?? []) {
-            const registerCode = _registerCodeFromKasa(row.kasa);
-            if (!registerCode) continue;
-            const productCode = (row.pluid ?? '').toString();
-            if (!productCode) continue;
-            const productName = (row.product_name ?? '').toString().trim() || null;
-            productsAgg.push({
-              registerCode,
-              productCode,
-              productName,
-              quantity: _parseMoneyLoose(row.quantity),
-              grossTotal: _parseMoneyLoose(row.total),
-            });
-          }
-        } catch {}
-      }
-    } finally {
-      await branchPool.end();
+          [businessDate, businessDayStartHour, kasaNos],
+        );
+        for (const row of r.rows ?? []) {
+          const registerCode = _registerCodeFromKasa(row.kasa);
+          if (!registerCode) continue;
+          const productCode = (row.pluid ?? '').toString();
+          if (!productCode) continue;
+          const productName = (row.product_name ?? '').toString().trim() || null;
+          productsAgg.push({
+            registerCode,
+            productCode,
+            productName,
+            quantity: _parseMoneyLoose(row.quantity),
+            grossTotal: _parseMoneyLoose(row.total),
+          });
+        }
+      } catch {}
     }
+  } finally {
+    await branchPool.end();
+  }
 
-    const client = await pool.connect();
-    try {
-      await client.query('begin');
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
 
-      await client.query(
-        `delete from pos_register_daily_sales where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-        [branchId, businessDate, source],
-      );
-      await client.query(
-        `delete from pos_register_daily_payments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-        [branchId, businessDate, source],
-      );
-      await client.query(
-        `delete from pos_register_daily_product_sales where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-        [branchId, businessDate, source],
-      );
-      await client.query(
-        `delete from pos_register_daily_adjustments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-        [branchId, businessDate, source],
-      );
-      await client.query(
-        `delete from pos_register_daily_sales_groups where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-        [branchId, businessDate, source],
-      );
+    await client.query(
+      `delete from pos_register_daily_sales where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+      [branchId, businessDate, source],
+    );
+    await client.query(
+      `delete from pos_register_daily_payments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+      [branchId, businessDate, source],
+    );
+    await client.query(
+      `delete from pos_register_daily_product_sales where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+      [branchId, businessDate, source],
+    );
+    await client.query(
+      `delete from pos_register_daily_adjustments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+      [branchId, businessDate, source],
+    );
+    await client.query(
+      `delete from pos_register_daily_sales_groups where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+      [branchId, businessDate, source],
+    );
 
-      let salesUpserts = 0;
-      for (const [registerCode, grossTotal] of salesByKasa.entries()) {
-        await client.query(
-          `
+    let salesUpserts = 0;
+    for (const [registerCode, grossTotal] of salesByKasa.entries()) {
+      await client.query(
+        `
           insert into pos_register_daily_sales(branch_id, business_date, register_code, gross_total, source)
           values ($1::uuid, $2::date, $3, $4::numeric, $5)
           on conflict (branch_id, business_date, source, register_code)
           do update set gross_total=excluded.gross_total, updated_at=now()
           `,
-          [branchId, businessDate, registerCode, grossTotal, source],
-        );
-        salesUpserts++;
-      }
+        [branchId, businessDate, registerCode, grossTotal, source],
+      );
+      salesUpserts++;
+    }
 
-      let paymentUpserts = 0;
-      for (const p of paymentsAgg) {
-        await client.query(
-          `
+    let paymentUpserts = 0;
+    for (const p of paymentsAgg) {
+      await client.query(
+        `
           insert into pos_register_daily_payments(
             branch_id, business_date, register_code, payment_code, amount, source
           )
@@ -2045,16 +2090,16 @@ app.post(
           on conflict (branch_id, business_date, source, register_code, payment_code)
           do update set amount=excluded.amount, updated_at=now()
           `,
-          [branchId, businessDate, p.registerCode, p.paymentCode, p.amount, source],
-        );
-        paymentUpserts++;
-      }
+        [branchId, businessDate, p.registerCode, p.paymentCode, p.amount, source],
+      );
+      paymentUpserts++;
+    }
 
-      let productUpserts = 0;
-      for (const pr of productsAgg) {
-        if (pr.productName) {
-          await client.query(
-            `
+    let productUpserts = 0;
+    for (const pr of productsAgg) {
+      if (pr.productName) {
+        await client.query(
+          `
             insert into inv_products(code, name, unit, is_active)
             values ($1, $2, 'adet', true)
             on conflict (code) do update set
@@ -2062,11 +2107,11 @@ app.post(
               is_active = true,
               updated_at = now()
             `,
-            [pr.productCode, pr.productName],
-          );
-        }
-        await client.query(
-          `
+          [pr.productCode, pr.productName],
+        );
+      }
+      await client.query(
+        `
           insert into pos_register_daily_product_sales(
             branch_id, business_date, register_code, product_code, product_name, quantity, gross_total, source
           )
@@ -2078,15 +2123,24 @@ app.post(
             gross_total = excluded.gross_total,
             updated_at = now()
           `,
-          [branchId, businessDate, pr.registerCode, pr.productCode, pr.productName, pr.quantity, pr.grossTotal, source],
-        );
-        productUpserts++;
-      }
+        [
+          branchId,
+          businessDate,
+          pr.registerCode,
+          pr.productCode,
+          pr.productName,
+          pr.quantity,
+          pr.grossTotal,
+          source,
+        ],
+      );
+      productUpserts++;
+    }
 
-      let adjustmentUpserts = 0;
-      for (const a of adjustmentsAgg) {
-        await client.query(
-          `
+    let adjustmentUpserts = 0;
+    for (const a of adjustmentsAgg) {
+      await client.query(
+        `
           insert into pos_register_daily_adjustments(
             branch_id, business_date, register_code, kind, amount, count, source
           )
@@ -2097,15 +2151,15 @@ app.post(
             count = excluded.count,
             updated_at = now()
           `,
-          [branchId, businessDate, a.registerCode, a.kind, a.amount, a.count, source],
-        );
-        adjustmentUpserts++;
-      }
+        [branchId, businessDate, a.registerCode, a.kind, a.amount, a.count, source],
+      );
+      adjustmentUpserts++;
+    }
 
-      let groupUpserts = 0;
-      for (const g of groupsAgg) {
-        await client.query(
-          `
+    let groupUpserts = 0;
+    for (const g of groupsAgg) {
+      await client.query(
+        `
           insert into pos_register_daily_sales_groups(
             branch_id, business_date, register_code, group_code, order_count, gross_total, source
           )
@@ -2116,48 +2170,172 @@ app.post(
             gross_total = excluded.gross_total,
             updated_at = now()
           `,
-          [branchId, businessDate, g.registerCode, g.groupCode, g.orderCount, g.grossTotal, source],
-        );
-        groupUpserts++;
-      }
+        [branchId, businessDate, g.registerCode, g.groupCode, g.orderCount, g.grossTotal, source],
+      );
+      groupUpserts++;
+    }
 
-      const sumRow = await client.query(
-        `
+    const sumRow = await client.query(
+      `
         select coalesce(sum(gross_total),0) as total
         from pos_register_daily_sales
         where branch_id=$1::uuid and business_date=$2::date and source=$3
         `,
-        [branchId, businessDate, source],
-      );
-      const total = sumRow.rows?.[0]?.total ?? 0;
-      await client.query(
-        `
+      [branchId, businessDate, source],
+    );
+    const total = sumRow.rows?.[0]?.total ?? 0;
+    await client.query(
+      `
         insert into daily_sales(branch_id, business_date, source, gross_total)
         values ($1::uuid, $2::date, $3, $4::numeric)
         on conflict (branch_id, business_date, source)
         do update set gross_total=excluded.gross_total
         `,
-        [branchId, businessDate, source, total],
-      );
+      [branchId, businessDate, source, total],
+    );
 
-      await client.query('commit');
-      res.json({
-        ok: true,
+    await client.query('commit');
+    return {
+      ok: true,
+      branchId,
+      businessDate,
+      salesUpserts,
+      paymentUpserts,
+      productUpserts,
+      adjustmentUpserts,
+      groupUpserts,
+      dailyTotal: total,
+    };
+  } catch (e) {
+    await client.query('rollback');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+app.get(
+  '/cron/pos/pull',
+  cronJobAuthRequired,
+  requireAnyRole(['manager', 'accounting']),
+  asyncRoute(async (req, res) => {
+    const branchIdFilter = (req.query?.branchId ?? '').toString().trim() || null;
+    const today = istanbulDateString(0);
+    const yesterday = istanbulDateString(-1);
+
+    const branches = await queryAll(
+      `
+      select id, business_day_start_hour as "businessDayStartHour"
+      from branches
+      where is_active = true
+      ${branchIdFilter ? 'and id = $1::uuid' : ''}
+      order by name asc
+      `,
+      branchIdFilter ? [branchIdFilter] : [],
+    );
+
+    const pulledYesterdayRows = await queryAll(
+      `
+      select branch_id
+      from daily_sales
+      where business_date = $1::date and source = 'pos'
+      `,
+      [yesterday],
+    );
+    const pulledYesterday = new Set(pulledYesterdayRows.map((r) => r.branch_id));
+
+    const results = await mapLimit(branches, 2, async (b) => {
+      const branchId = (b.id ?? '').toString();
+      const businessDayStartHour =
+        Number.parseInt((b.businessDayStartHour ?? 0).toString(), 10) || 0;
+
+      const r = {
         branchId,
-        businessDate,
-        salesUpserts,
-        paymentUpserts,
-        productUpserts,
-        adjustmentUpserts,
-        groupUpserts,
-        dailyTotal: total,
-      });
-    } catch (e) {
-      await client.query('rollback');
-      throw e;
-    } finally {
-      client.release();
-    }
+        ok: true,
+        pulled: [],
+        errors: [],
+      };
+
+      let cfg = null;
+      try {
+        cfg = await getBranchDataSourceConfig(branchId);
+      } catch (e) {
+        r.ok = false;
+        r.errors.push({
+          step: 'config',
+          error: (e?.code ?? 'CONFIG_ERROR').toString(),
+          message: (e?.message ?? 'CONFIG_ERROR').toString(),
+        });
+        return r;
+      }
+
+      if (!cfg) {
+        r.ok = false;
+        r.errors.push({ step: 'config', error: 'BRANCH_DB_NOT_CONFIGURED' });
+        return r;
+      }
+      if (!cfg.isActive) {
+        r.ok = false;
+        r.errors.push({ step: 'config', error: 'BRANCH_DB_INACTIVE' });
+        return r;
+      }
+
+      const source = 'pos';
+
+      const needYesterday = !pulledYesterday.has(branchId);
+      if (needYesterday) {
+        try {
+          const out = await pullBranchDailyPos({
+            branchId,
+            businessDate: yesterday,
+            source,
+            businessDayStartHour,
+            cfg,
+          });
+          r.pulled.push({ date: yesterday, ...out });
+        } catch (e) {
+          r.ok = false;
+          r.errors.push({
+            step: 'pull',
+            date: yesterday,
+            error: (e?.code ?? 'PULL_FAILED').toString(),
+            message: (e?.message ?? 'PULL_FAILED').toString(),
+          });
+        }
+      }
+
+      try {
+        const out = await pullBranchDailyPos({
+          branchId,
+          businessDate: today,
+          source,
+          businessDayStartHour,
+          cfg,
+        });
+        r.pulled.push({ date: today, ...out });
+      } catch (e) {
+        r.ok = false;
+        r.errors.push({
+          step: 'pull',
+          date: today,
+          error: (e?.code ?? 'PULL_FAILED').toString(),
+          message: (e?.message ?? 'PULL_FAILED').toString(),
+        });
+      }
+
+      return r;
+    });
+
+    const okCount = results.filter((x) => x.ok).length;
+    res.json({
+      ok: true,
+      today,
+      yesterday,
+      branches: results.length,
+      okCount,
+      failCount: results.length - okCount,
+      results,
+    });
   }),
 );
 
@@ -4867,6 +5045,100 @@ app.get(
 );
 
 app.get(
+  '/pos/pull/status',
+  authRequired,
+  requireAnyRole(['manager', 'accounting']),
+  asyncRoute(async (req, res) => {
+    const branchId = (req.query?.branchId ?? '').toString().trim() || null;
+    const rows = await queryAll(
+      `
+      with
+        s as (
+          select
+            branch_id,
+            max(updated_at) as last_pulled_at,
+            max(business_date) as last_business_date
+          from pos_register_daily_sales
+          where source = 'pos'
+          group by branch_id
+        ),
+        p as (
+          select
+            branch_id,
+            max(updated_at) as last_pulled_at,
+            max(business_date) as last_business_date
+          from pos_register_daily_payments
+          where source = 'pos'
+          group by branch_id
+        ),
+        pr as (
+          select
+            branch_id,
+            max(updated_at) as last_pulled_at,
+            max(business_date) as last_business_date
+          from pos_register_daily_product_sales
+          where source = 'pos'
+          group by branch_id
+        ),
+        a as (
+          select
+            branch_id,
+            max(updated_at) as last_pulled_at,
+            max(business_date) as last_business_date
+          from pos_register_daily_adjustments
+          where source = 'pos'
+          group by branch_id
+        ),
+        g as (
+          select
+            branch_id,
+            max(updated_at) as last_pulled_at,
+            max(business_date) as last_business_date
+          from pos_register_daily_sales_groups
+          where source = 'pos'
+          group by branch_id
+        )
+      select
+        b.id as "branchId",
+        b.name as "branchName",
+        b.is_active as "isActive",
+        nullif(
+          greatest(
+            coalesce(s.last_pulled_at, 'epoch'::timestamptz),
+            coalesce(p.last_pulled_at, 'epoch'::timestamptz),
+            coalesce(pr.last_pulled_at, 'epoch'::timestamptz),
+            coalesce(a.last_pulled_at, 'epoch'::timestamptz),
+            coalesce(g.last_pulled_at, 'epoch'::timestamptz)
+          ),
+          'epoch'::timestamptz
+        ) as "lastPulledAt",
+        nullif(
+          greatest(
+            coalesce(s.last_business_date, '1970-01-01'::date),
+            coalesce(p.last_business_date, '1970-01-01'::date),
+            coalesce(pr.last_business_date, '1970-01-01'::date),
+            coalesce(a.last_business_date, '1970-01-01'::date),
+            coalesce(g.last_business_date, '1970-01-01'::date)
+          ),
+          '1970-01-01'::date
+        ) as "lastBusinessDate"
+      from branches b
+      left join s on s.branch_id = b.id
+      left join p on p.branch_id = b.id
+      left join pr on pr.branch_id = b.id
+      left join a on a.branch_id = b.id
+      left join g on g.branch_id = b.id
+      where b.is_active = true
+        and ($1::uuid is null or b.id = $1::uuid)
+      order by b.name asc
+      `,
+      [branchId],
+    );
+    res.json(rows);
+  }),
+);
+
+app.get(
   '/sales/daily/registers',
   authRequired,
   asyncRoute(async (req, res) => {
@@ -5031,6 +5303,35 @@ function posAuthRequired(req, res, next) {
     };
     return next();
   }
+  return authRequired(req, res, next);
+}
+
+function cronJobAuthRequired(req, res, next) {
+  const cronSecret = (process.env.CRON_SECRET ?? '').toString().trim();
+  const authHeader = (req.headers.authorization ?? '').toString().trim();
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    req.user = {
+      sub: 'cron',
+      role: 'accounting',
+      branchId: null,
+    };
+    return next();
+  }
+
+  if (!cronSecret) {
+    const vercelCronHeader = (req.headers['x-vercel-cron'] ?? '').toString().trim();
+    const ua = (req.headers['user-agent'] ?? '').toString();
+    const isVercelCron = vercelCronHeader === '1' || ua.includes('vercel-cron/1.0');
+    if (isVercelCron) {
+      req.user = {
+        sub: 'cron',
+        role: 'accounting',
+        branchId: null,
+      };
+      return next();
+    }
+  }
+
   return authRequired(req, res, next);
 }
 

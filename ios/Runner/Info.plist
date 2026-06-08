@@ -30,6 +30,12 @@
 	<string>Konum, şubeye bağlı işlemleri ve entegrasyon kontrollerini desteklemek için kullanılır.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Konum, şubeye bağlı işlemleri ve entegrasyon kontrollerini desteklemek için kullanılır.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Günsonu fişi ve evrakları tarayıp sisteme yüklemek için kamera kullanılır.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Günsonu fişi ve evrakları galeriden seçip sisteme yüklemek için fotoğraf arşivine erişim gerekir.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>İndirilen/oluşturulan raporları galerine kaydetmek için fotoğraf arşivine ekleme izni gerekir.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -218,9 +218,7 @@ class _ReconciliationDetailPageState
         : (assignedCodes.isEmpty
             ? posRegsNow
             : posRegsNow.where((e) => assignedCodes.contains(e.registerCode)).toList());
-    final posSalesNowTotal = posRegsEffective == null
-        ? null
-        : posRegsEffective.fold<double>(0, (p, e) => p + e.grossTotal);
+    final posSalesNowTotal = posRegsEffective?.fold<double>(0, (p, e) => p + e.grossTotal);
     final hasMissingSalesNow = isToday &&
         posSalesNowTotal != null &&
         expected + 0.01 < posSalesNowTotal;
@@ -487,7 +485,7 @@ class _ReconciliationDetailPageState
                       const SizedBox(width: 8),
                       Text(title, style: Theme.of(context).textTheme.titleMedium),
                       const Spacer(),
-                      Chip(label: Text('${totalCount} adet')),
+                      Chip(label: Text('$totalCount adet')),
                       const SizedBox(width: 8),
                       Chip(label: Text(money.format(totalAmount))),
                     ],
@@ -719,7 +717,7 @@ class _ReconciliationDetailPageState
                           const SizedBox(width: 8),
                           Text('Grup Satış', style: Theme.of(context).textTheme.titleMedium),
                           const Spacer(),
-                          Chip(label: Text('${totalOrders} adet')),
+                          Chip(label: Text('$totalOrders adet')),
                           const SizedBox(width: 8),
                           Chip(label: Text(money.format(totalGross))),
                         ],

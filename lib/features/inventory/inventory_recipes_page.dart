@@ -299,8 +299,12 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
     _yieldQtyController.dispose();
     _yieldUnitController.dispose();
     _gimOranController.dispose();
-    for (final c in _qtyControllers.values) c.dispose();
-    for (final c in _wasteControllers.values) c.dispose();
+    for (final c in _qtyControllers.values) {
+      c.dispose();
+    }
+    for (final c in _wasteControllers.values) {
+      c.dispose();
+    }
     _qtyControllers.clear();
     _wasteControllers.clear();
     super.dispose();
@@ -468,7 +472,7 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
             cell(
               Text(
                 NumberFormat('#,##0.0000', 'tr_TR')
-                    .format(ref.watch(inventoryRecipeDetailProvider(widget.recipeId)).asData?.value?.totals.recipeCost ?? 0),
+                    .format(ref.watch(inventoryRecipeDetailProvider(widget.recipeId)).asData?.value.totals.recipeCost ?? 0),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),

@@ -352,6 +352,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             _TodaySalesCard(branches: branches),
           ],
         ),
+        const SizedBox(height: 12),
+        _PosPullStatusCard(branches: branches),
         const SizedBox(height: 16),
         Text(
           'Akış Özeti (${DateFormat('yyyy-MM-dd', 'tr_TR').format(from)} → ${DateFormat('yyyy-MM-dd', 'tr_TR').format(to)})',
@@ -547,6 +549,74 @@ class _TodaySalesCard extends ConsumerWidget {
           onTap: null,
         );
       },
+    );
+  }
+}
+
+class _PosPullStatusCard extends ConsumerWidget {
+  const _PosPullStatusCard({required this.branches});
+
+  final List<Branch> branches;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(posPullStatusesProvider);
+    final dt = DateFormat('yyyy-MM-dd HH:mm', 'tr_TR');
+    final d = DateFormat('yyyy-MM-dd', 'tr_TR');
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text('POS Son Çekim', style: Theme.of(context).textTheme.titleMedium),
+                const Spacer(),
+                FilledButton.tonal(
+                  onPressed: () => ref.invalidate(posPullStatusesProvider),
+                  child: const Text('Yenile'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            async.when(
+              data: (items) {
+                if (items.isEmpty) {
+                  return const Text('Kayıt bulunamadı.');
+                }
+                final byId = {for (final x in items) x.branchId: x};
+                return Column(
+                  children: [
+                    for (final b in branches)
+                      Builder(
+                        builder: (context) {
+                          final s = byId[b.id];
+                          final lastPulledAt = s?.lastPulledAt;
+                          final lastBusinessDate = s?.lastBusinessDate;
+                          final subtitleParts = <String>[];
+                          if (lastBusinessDate != null) subtitleParts.add('Tarih: ${d.format(lastBusinessDate)}');
+                          subtitleParts.add(
+                            lastPulledAt == null ? 'Son çekim: -' : 'Son çekim: ${dt.format(lastPulledAt.toLocal())}',
+                          );
+                          return ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(b.name),
+                            subtitle: Text(subtitleParts.join(' • ')),
+                          );
+                        },
+                      ),
+                  ],
+                );
+              },
+              loading: () => const Text('Yükleniyor...'),
+              error: (e, _) => Text('Son çekim bilgisi alınamadı: $e'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

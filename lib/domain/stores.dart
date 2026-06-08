@@ -2232,6 +2232,24 @@ final posLiveDailyTotalProvider =
   },
 );
 
+final posPullStatusesProvider = FutureProvider<List<PosPullStatus>>((ref) async {
+  if (!AppConfig.hasApi) return const [];
+  final dio = ref.read(dioProvider);
+  final res = await dio.get<List<dynamic>>('/pos/pull/status');
+  final data = res.data ?? const [];
+  return [
+    for (final raw in data)
+      if (raw is Map<String, dynamic>)
+        PosPullStatus(
+          branchId: (raw['branchId'] ?? '').toString(),
+          branchName: (raw['branchName'] ?? '').toString(),
+          isActive: (raw['isActive'] as bool?) ?? true,
+          lastPulledAt: DateTime.tryParse((raw['lastPulledAt'] ?? '').toString()),
+          lastBusinessDate: DateTime.tryParse((raw['lastBusinessDate'] ?? '').toString()),
+        ),
+  ];
+});
+
 final endOfDayReportsProvider =
     FutureProvider.family<List<EndOfDayReport>, String>((ref, reconciliationId) async {
   if (!AppConfig.hasApi) return const [];
