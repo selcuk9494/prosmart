@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app/api_client.dart';
 import '../../app/config.dart';
 import 'auth_models.dart';
 
@@ -45,18 +46,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     state = await AsyncValue.guard(() async {
       if (AppConfig.hasApi) {
         try {
-          final dio = Dio(
-            BaseOptions(
-              baseUrl: AppConfig.apiBaseUrl.trim(),
-              connectTimeout: const Duration(seconds: 15),
-              receiveTimeout: const Duration(seconds: 30),
-              sendTimeout: const Duration(seconds: 30),
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-              },
-            ),
-          );
+          final dio = ref.read(dioProvider);
 
           final res = await dio.post<Map<String, dynamic>>(
             '/auth/login',
@@ -89,7 +79,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
           await _persistSession(session);
           return session;
         } on DioException catch (e) {
-          final base = AppConfig.apiBaseUrl.trim();
+          final base = AppConfig.apiBaseUrl.trim().isEmpty ? '(same-origin)' : AppConfig.apiBaseUrl.trim();
           throw StateError(
             'API bağlantı hatası: $base\n'
             'Detay: ${e.message ?? e.type.name}\n'
