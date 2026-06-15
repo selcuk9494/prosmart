@@ -4202,7 +4202,28 @@ app.get(
     const branchId = req.user?.role === 'branchUser' ? req.user.branchId : branchIdRaw;
     if (!branchId) return res.status(400).json({ error: 'BRANCH_REQUIRED' });
     if (!canAccessBranch(req, branchId)) return res.status(403).json({ error: 'FORBIDDEN' });
-    res.json([]);
+    const rows = await queryAll(
+      `
+      select
+        t.id,
+        t.branch_id as "branchId",
+        coalesce(t.reference_no, t.id::text) as "docNo",
+        t.business_date as "docDate",
+        t.notes as "vendorName",
+        coalesce(sum(abs(l.quantity) * coalesce(l.unit_cost, 0)), 0) as total,
+        count(l.product_id)::int as "linesCount",
+        t.kind
+      from inv_stock_transactions t
+      left join inv_stock_transaction_lines l on l.transaction_id = t.id
+      where t.branch_id = $1::uuid
+        and t.kind in ('purchase_order', 'purchase_request', 'purchase_quote')
+      group by t.id, t.branch_id, t.reference_no, t.business_date, t.notes, t.kind, t.created_at
+      order by t.business_date desc, t.created_at desc
+      limit 250
+      `,
+      [branchId],
+    );
+    res.json(rows);
   }),
 );
 

@@ -31,6 +31,7 @@ import '../features/inventory/inventory_products_page.dart';
 import '../features/inventory/inventory_recipes_page.dart';
 import '../features/inventory/inventory_transactions_page.dart';
 import '../features/inventory/inventory_warehouses_page.dart';
+import '../features/inventory/purchase_orders_page.dart';
 import '../features/mobile/mobile_document_capture_page.dart';
 import '../features/operations/branch_operations_page.dart';
 import '../features/reconciliation/reconciliation_detail_page.dart';
@@ -135,6 +136,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 ),
               ),
             ],
+          ),
+          GoRoute(
+            path: '/purchase/orders',
+            builder: (context, state) => const PurchaseOrdersPage(),
           ),
           GoRoute(
             path: '/inv/warehouses',
