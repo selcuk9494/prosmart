@@ -669,351 +669,364 @@ class _InventoryInvoiceDetailPageState
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Row(
-              children: [
-                Text(
-                  'Alış Faturası - Ekleme',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const Spacer(),
-                OutlinedButton(
+            _NbosInvoiceToolbar(
+              title: 'Alış Faturası Kartı',
+              subtitle:
+                  '${header.invoiceNo} • ${header.vendorName?.isNotEmpty == true ? header.vendorName! : 'Firma seçilmedi'}',
+              actions: [
+                OutlinedButton.icon(
                   onPressed: () => context.go('/inv/invoices'),
-                  child: const Text('Kapat'),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Kapat'),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        SizedBox(
-                          width: 220,
-                          child: TextField(
-                            controller: _invoiceNoController,
-                            enabled: canEdit,
-                            decoration: const InputDecoration(
-                              labelText: 'Fatura No',
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 220,
-                          child: TextField(
-                            controller: _vendorController,
-                            enabled: canEdit,
-                            decoration: const InputDecoration(
-                              labelText: 'Firma',
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 260,
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Ödeme Türü',
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String?>(
-                                isExpanded: true,
-                                value: paymentTypeValue,
-                                items: [
-                                  const DropdownMenuItem<String?>(
-                                    value: null,
-                                    child: Text('Seçiniz'),
-                                  ),
-                                  for (final p in paymentTypes)
-                                    DropdownMenuItem<String?>(
-                                      value: p.id,
-                                      child: Text(p.name),
-                                    ),
-                                ],
-                                onChanged: !canEdit
-                                    ? null
-                                    : (v) {
-                                        setState(() => _paymentTypeId = v);
-                                      },
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 260,
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Gelir Merkezi',
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String?>(
-                                isExpanded: true,
-                                value: incomeCenterValue,
-                                items: [
-                                  const DropdownMenuItem<String?>(
-                                    value: null,
-                                    child: Text('Seçiniz'),
-                                  ),
-                                  for (final g in incomeCenters)
-                                    DropdownMenuItem<String?>(
-                                      value: g.id,
-                                      child: Text(g.name),
-                                    ),
-                                ],
-                                onChanged: !canEdit
-                                    ? null
-                                    : (v) {
-                                        setState(() => _incomeCenterId = v);
-                                      },
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 220,
-                          child: InkWell(
-                            onTap: !canEdit
-                                ? null
-                                : () async {
-                                    final picked = await _pickDate(
-                                      context,
-                                      initial: _invoiceDate,
-                                    );
-                                    if (picked != null) {
-                                      setState(() => _invoiceDate = picked);
-                                    }
-                                  },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Fatura Tarihi',
-                              ),
-                              child: Text(
-                                _invoiceDate == null ? '' : _fmt(_invoiceDate!),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 220,
-                          child: InkWell(
-                            onTap: !canEdit
-                                ? null
-                                : () async {
-                                    final picked = await _pickDate(
-                                      context,
-                                      initial: _paymentDate,
-                                    );
-                                    if (picked != null) {
-                                      setState(() => _paymentDate = picked);
-                                    }
-                                  },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Ödeme Tarihi',
-                              ),
-                              child: Text(
-                                _paymentDate == null ? '' : _fmt(_paymentDate!),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 140,
-                          child: TextField(
-                            controller: _discountRateController,
-                            enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Genel İndirim (%)',
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 160,
-                          child: TextField(
-                            controller: _discountAmountController,
-                            enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'İndirim Tutar',
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 180,
-                          child: TextField(
-                            controller: _mealVoucherDiscountController,
-                            enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Yemek Çeki İndirim',
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 520,
-                          child: TextField(
-                            controller: _notesController,
-                            enabled: canEdit,
-                            decoration: const InputDecoration(
-                              labelText: 'Açıklama',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: 16,
-                            runSpacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                'Toplam: ${total.toStringAsFixed(2)}',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              Chip(
-                                avatar: Icon(
-                                  stockPost == null
-                                      ? Icons.inventory_2_outlined
-                                      : Icons.check_circle_outline,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  stockPost == null
-                                      ? 'Stoka işlenmedi'
-                                      : '${stockPost.warehouseName ?? 'Depo'}: ${stockPost.linesCount} satır işlendi',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed: !canEdit || !hasStockLines
-                              ? null
-                              : () async {
-                                  try {
-                                    await ref
-                                        .read(inventoryInvoiceActionsProvider)
-                                        .postToStock(widget.invoiceId);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Fatura stoğa işlendi.',
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text(_errText(e))),
-                                      );
-                                    }
-                                  }
-                                },
-                          icon: const Icon(Icons.move_down_outlined),
-                          label: const Text('Stoka İşle'),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: !canEdit
-                              ? null
-                              : () async {
-                                  final rate = double.tryParse(
-                                    _discountRateController.text.replaceAll(
-                                      ',',
-                                      '.',
-                                    ),
-                                  );
-                                  final amount = double.tryParse(
-                                    _discountAmountController.text.replaceAll(
-                                      ',',
-                                      '.',
-                                    ),
-                                  );
-                                  final meal = double.tryParse(
-                                    _mealVoucherDiscountController.text
-                                        .replaceAll(',', '.'),
-                                  );
-                                  try {
-                                    await ref
-                                        .read(inventoryInvoiceActionsProvider)
-                                        .updateHeader(
-                                          widget.invoiceId,
-                                          invoiceNo: _invoiceNoController.text
-                                              .trim(),
-                                          invoiceDate: _invoiceDate,
-                                          vendorName: _vendorController.text
-                                              .trim(),
-                                          notes: _notesController.text.trim(),
-                                          paymentTypeId: _paymentTypeId ?? '',
-                                          incomeCenterId: _incomeCenterId ?? '',
-                                          discountRate:
-                                              _discountRateController.text
-                                                  .trim()
-                                                  .isEmpty
-                                              ? null
-                                              : rate,
-                                          discountAmount:
-                                              _discountAmountController.text
-                                                  .trim()
-                                                  .isEmpty
-                                              ? null
-                                              : amount,
-                                          mealVoucherDiscount:
-                                              _mealVoucherDiscountController
-                                                  .text
-                                                  .trim()
-                                                  .isEmpty
-                                              ? null
-                                              : meal,
-                                          paymentDate: _paymentDate,
-                                        );
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Kaydedildi.'),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text(_errText(e))),
-                                      );
-                                    }
-                                  }
-                                },
-                          child: const Text('Kaydet'),
-                        ),
-                      ],
-                    ),
-                  ],
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _InvoiceMetric(
+                  label: 'Belge No',
+                  value: header.invoiceNo,
+                  icon: Icons.tag_outlined,
                 ),
+                _InvoiceMetric(
+                  label: 'Tarih',
+                  value: _fmt(header.invoiceDate),
+                  icon: Icons.event_outlined,
+                ),
+                _InvoiceMetric(
+                  label: 'Toplam',
+                  value: total.toStringAsFixed(2),
+                  icon: Icons.payments_outlined,
+                ),
+                _InvoiceMetric(
+                  label: 'Stok',
+                  value: stockPost == null ? 'İşlenmedi' : 'İşlendi',
+                  icon: stockPost == null
+                      ? Icons.inventory_2_outlined
+                      : Icons.check_circle_outline,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _SectionFrame(
+              title: 'Belge Bilgileri',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(
+                        width: 220,
+                        child: TextField(
+                          controller: _invoiceNoController,
+                          enabled: canEdit,
+                          decoration: const InputDecoration(
+                            labelText: 'Fatura No',
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 220,
+                        child: TextField(
+                          controller: _vendorController,
+                          enabled: canEdit,
+                          decoration: const InputDecoration(labelText: 'Firma'),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 260,
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Ödeme Türü',
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: paymentTypeValue,
+                              items: [
+                                const DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('Seçiniz'),
+                                ),
+                                for (final p in paymentTypes)
+                                  DropdownMenuItem<String?>(
+                                    value: p.id,
+                                    child: Text(p.name),
+                                  ),
+                              ],
+                              onChanged: !canEdit
+                                  ? null
+                                  : (v) {
+                                      setState(() => _paymentTypeId = v);
+                                    },
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 260,
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Gelir Merkezi',
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: incomeCenterValue,
+                              items: [
+                                const DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('Seçiniz'),
+                                ),
+                                for (final g in incomeCenters)
+                                  DropdownMenuItem<String?>(
+                                    value: g.id,
+                                    child: Text(g.name),
+                                  ),
+                              ],
+                              onChanged: !canEdit
+                                  ? null
+                                  : (v) {
+                                      setState(() => _incomeCenterId = v);
+                                    },
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 220,
+                        child: InkWell(
+                          onTap: !canEdit
+                              ? null
+                              : () async {
+                                  final picked = await _pickDate(
+                                    context,
+                                    initial: _invoiceDate,
+                                  );
+                                  if (picked != null) {
+                                    setState(() => _invoiceDate = picked);
+                                  }
+                                },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Fatura Tarihi',
+                            ),
+                            child: Text(
+                              _invoiceDate == null ? '' : _fmt(_invoiceDate!),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 220,
+                        child: InkWell(
+                          onTap: !canEdit
+                              ? null
+                              : () async {
+                                  final picked = await _pickDate(
+                                    context,
+                                    initial: _paymentDate,
+                                  );
+                                  if (picked != null) {
+                                    setState(() => _paymentDate = picked);
+                                  }
+                                },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Ödeme Tarihi',
+                            ),
+                            child: Text(
+                              _paymentDate == null ? '' : _fmt(_paymentDate!),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 140,
+                        child: TextField(
+                          controller: _discountRateController,
+                          enabled: canEdit,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Genel İndirim (%)',
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 160,
+                        child: TextField(
+                          controller: _discountAmountController,
+                          enabled: canEdit,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'İndirim Tutar',
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 180,
+                        child: TextField(
+                          controller: _mealVoucherDiscountController,
+                          enabled: canEdit,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Yemek Çeki İndirim',
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 520,
+                        child: TextField(
+                          controller: _notesController,
+                          enabled: canEdit,
+                          decoration: const InputDecoration(
+                            labelText: 'Açıklama',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: 16,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Toplam: ${total.toStringAsFixed(2)}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Chip(
+                              avatar: Icon(
+                                stockPost == null
+                                    ? Icons.inventory_2_outlined
+                                    : Icons.check_circle_outline,
+                                size: 18,
+                              ),
+                              label: Text(
+                                stockPost == null
+                                    ? 'Stoka işlenmedi'
+                                    : '${stockPost.warehouseName ?? 'Depo'}: ${stockPost.linesCount} satır işlendi',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: !canEdit || !hasStockLines
+                            ? null
+                            : () async {
+                                try {
+                                  await ref
+                                      .read(inventoryInvoiceActionsProvider)
+                                      .postToStock(widget.invoiceId);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Fatura stoğa işlendi.'),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(_errText(e))),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: const Icon(Icons.move_down_outlined),
+                        label: const Text('Stoka İşle'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: !canEdit
+                            ? null
+                            : () async {
+                                final rate = double.tryParse(
+                                  _discountRateController.text.replaceAll(
+                                    ',',
+                                    '.',
+                                  ),
+                                );
+                                final amount = double.tryParse(
+                                  _discountAmountController.text.replaceAll(
+                                    ',',
+                                    '.',
+                                  ),
+                                );
+                                final meal = double.tryParse(
+                                  _mealVoucherDiscountController.text
+                                      .replaceAll(',', '.'),
+                                );
+                                try {
+                                  await ref
+                                      .read(inventoryInvoiceActionsProvider)
+                                      .updateHeader(
+                                        widget.invoiceId,
+                                        invoiceNo: _invoiceNoController.text
+                                            .trim(),
+                                        invoiceDate: _invoiceDate,
+                                        vendorName: _vendorController.text
+                                            .trim(),
+                                        notes: _notesController.text.trim(),
+                                        paymentTypeId: _paymentTypeId ?? '',
+                                        incomeCenterId: _incomeCenterId ?? '',
+                                        discountRate:
+                                            _discountRateController.text
+                                                .trim()
+                                                .isEmpty
+                                            ? null
+                                            : rate,
+                                        discountAmount:
+                                            _discountAmountController.text
+                                                .trim()
+                                                .isEmpty
+                                            ? null
+                                            : amount,
+                                        mealVoucherDiscount:
+                                            _mealVoucherDiscountController.text
+                                                .trim()
+                                                .isEmpty
+                                            ? null
+                                            : meal,
+                                        paymentDate: _paymentDate,
+                                      );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Kaydedildi.'),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(_errText(e))),
+                                    );
+                                  }
+                                }
+                              },
+                        child: const Text('Kaydet'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
