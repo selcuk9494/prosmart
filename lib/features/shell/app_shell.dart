@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/stores.dart';
-import '../../legacy/crm_menu.dart';
+import '../../legacy/crm_menu.dart' show myMenuPermissionsProvider;
 import '../auth/auth_controller.dart';
 import '../auth/auth_models.dart';
 
@@ -42,8 +42,6 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final pendingApprovals = ref.watch(pendingApprovalsCountProvider);
     final mismatches = ref.watch(mismatchesCountProvider);
-    final crmMenu = ref.watch(crmMenuProvider);
-
     final isWide = MediaQuery.sizeOf(context).width >= 1000;
     final menuWidth = isWide ? 360.0 : 320.0;
 
@@ -55,7 +53,6 @@ class _AppShellState extends ConsumerState<AppShell> {
         isManager: isManager,
         allowedRefsLower: allowedRefsLower,
       ),
-      ..._buildCrmMenuSections(crmMenu),
     ];
     final query = _searchController.text.trim().toLowerCase();
     final sections = query.isEmpty
@@ -161,69 +158,6 @@ class _AppShellState extends ConsumerState<AppShell> {
       }
     }
     return filtered;
-  }
-
-  List<_MenuSection> _buildCrmMenuSections(
-    AsyncValue<List<CrmMenuSection>> crmMenu,
-  ) {
-    return crmMenu.when(
-      data: (sections) {
-        return [
-          for (final s in sections)
-            _MenuSection(
-              title: s.title,
-              items: [for (final n in s.nodes) _fromCrmNode(n)],
-            ),
-        ];
-      },
-      loading: () {
-        return const [
-          _MenuSection(
-            title: 'NBOS Menü',
-            items: [
-              _MenuItem(
-                title: 'Yükleniyor…',
-                icon: Icons.hourglass_empty,
-                enabled: false,
-              ),
-            ],
-          ),
-        ];
-      },
-      error: (e, st) {
-        return const [
-          _MenuSection(
-            title: 'NBOS Menü',
-            items: [
-              _MenuItem(
-                title: 'Menü yüklenemedi',
-                subtitle: 'CrmMenu.xml okunamadı',
-                icon: Icons.error_outline,
-                enabled: false,
-              ),
-            ],
-          ),
-        ];
-      },
-    );
-  }
-
-  _MenuItem _fromCrmNode(CrmMenuNode node) {
-    final route = node.route;
-    final titledRoute = route != null && route.startsWith('/legacy/')
-        ? Uri(path: route, queryParameters: {'title': node.title}).toString()
-        : route;
-    return _MenuItem(
-      title: node.title,
-      subtitle: node.subtitle,
-      icon: node.icon,
-      route: titledRoute,
-      permissionRef: node.legacyRef ?? node.subtitle,
-      enabled: true,
-      children: node.children == null
-          ? null
-          : [for (final c in node.children!) _fromCrmNode(c)],
-    );
   }
 
   List<_MenuSection> _buildMenu({
@@ -413,7 +347,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         ],
       ),
       _MenuSection(
-        title: 'Restoran Yönetimi',
+        title: 'Stok Yönetimi',
         items: const [
           _MenuItem(
             title: 'Ürünler',
@@ -421,13 +355,6 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.shopping_bag_outlined,
             route: '/inv/products',
             permissionRef: 'urun_tree',
-          ),
-          _MenuItem(
-            title: 'Depolar',
-            subtitle: 'Depo tanımları',
-            icon: Icons.warehouse_outlined,
-            route: '/inv/warehouses',
-            permissionRef: 'insert_depo',
           ),
           _MenuItem(
             title: 'Stok Hareketleri',
@@ -444,11 +371,23 @@ class _AppShellState extends ConsumerState<AppShell> {
             permissionRef: 'eldeki_stok',
           ),
           _MenuItem(
-            title: 'Fatura',
-            subtitle: 'Gelen/çıkan fatura',
-            icon: Icons.request_quote_outlined,
-            route: '/inv/invoices',
-            permissionRef: 'ps_inv_invoices',
+            title: 'Maliyet Analizi',
+            subtitle: 'Food cost',
+            icon: Icons.analytics_outlined,
+            route: '/legacy/ps_cost_analysis',
+            permissionRef: 'ps_cost_analysis',
+          ),
+        ],
+      ),
+      _MenuSection(
+        title: 'Depo Yönetimi',
+        items: const [
+          _MenuItem(
+            title: 'Depolar',
+            subtitle: 'Depo tanımları',
+            icon: Icons.warehouse_outlined,
+            route: '/inv/warehouses',
+            permissionRef: 'insert_depo',
           ),
           _MenuItem(
             title: 'Depo Sayım',
@@ -457,24 +396,60 @@ class _AppShellState extends ConsumerState<AppShell> {
             route: '/inv/counts',
             permissionRef: 'insert_sayim_fisi',
           ),
+        ],
+      ),
+      _MenuSection(
+        title: 'Fatura Girişleri',
+        items: const [
           _MenuItem(
-            title: 'Reçete',
+            title: 'Faturalar',
+            subtitle: 'Alış fatura girişi',
+            icon: Icons.request_quote_outlined,
+            route: '/inv/invoices',
+            permissionRef: 'ps_inv_invoices',
+          ),
+          _MenuItem(
+            title: 'Satınalma Siparişleri',
+            subtitle: 'Açık siparişler',
+            icon: Icons.shopping_cart_checkout_outlined,
+            route: '/purchase/orders',
+            permissionRef: 'ps_purchase_orders',
+          ),
+        ],
+      ),
+      _MenuSection(
+        title: 'Reçete Girişi',
+        items: const [
+          _MenuItem(
+            title: 'Reçeteler',
             subtitle: 'Ürün reçeteleri',
             icon: Icons.menu_book_outlined,
             route: '/inv/recipes',
             permissionRef: 'insert_recete',
           ),
+        ],
+      ),
+      _MenuSection(
+        title: 'Cari / Banka',
+        items: const [
           _MenuItem(
-            title: 'Maliyet Analizi',
-            subtitle: 'Food cost / rapor',
-            icon: Icons.analytics_outlined,
-            route: '/legacy/ps_cost_analysis',
-            permissionRef: 'ps_cost_analysis',
+            title: 'Cari Borç Takibi',
+            subtitle: 'Firma borç/alacak',
+            icon: Icons.account_balance_wallet_outlined,
+            route: '/legacy/ps_current_accounts',
+            permissionRef: 'ps_current_accounts',
+          ),
+          _MenuItem(
+            title: 'Banka / Çek Girişleri',
+            subtitle: 'Banka, çek ve ödeme',
+            icon: Icons.account_balance_outlined,
+            route: '/legacy/ps_bank_checks',
+            permissionRef: 'ps_bank_checks',
           ),
         ],
       ),
       _MenuSection(
-        title: 'Raporlar',
+        title: 'Raporlamalar',
         items: const [
           _MenuItem(
             title: 'Ana Grup Satış',

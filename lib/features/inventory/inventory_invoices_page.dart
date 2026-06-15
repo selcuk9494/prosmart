@@ -343,9 +343,6 @@ class _InventoryInvoiceCreatePageState
   final _invoiceNoController = TextEditingController();
   final _vendorController = TextEditingController();
   final _notesController = TextEditingController();
-  final _discountRateController = TextEditingController();
-  final _discountAmountController = TextEditingController();
-  final _mealVoucherDiscountController = TextEditingController();
   final _productQueryController = TextEditingController();
   final _lineDescriptionController = TextEditingController();
   final _lineUnitController = TextEditingController();
@@ -354,9 +351,6 @@ class _InventoryInvoiceCreatePageState
 
   String? _selectedBranchId;
   DateTime _invoiceDate = DateTime.now();
-  DateTime? _paymentDate;
-  String? _paymentTypeId;
-  String? _incomeCenterId;
   String _docKind = 'purchase_invoice';
   InventoryProduct? _selectedProduct;
   final List<_DraftInvoiceLine> _lines = [];
@@ -377,9 +371,6 @@ class _InventoryInvoiceCreatePageState
     _invoiceNoController.dispose();
     _vendorController.dispose();
     _notesController.dispose();
-    _discountRateController.dispose();
-    _discountAmountController.dispose();
-    _mealVoucherDiscountController.dispose();
     _productQueryController.dispose();
     _lineDescriptionController.dispose();
     _lineUnitController.dispose();
@@ -397,14 +388,6 @@ class _InventoryInvoiceCreatePageState
         .watch(branchesProvider)
         .where((e) => e.isActive)
         .toList();
-    final paymentTypes = ref
-        .watch(paymentTypesProvider)
-        .where((e) => e.isActive)
-        .toList();
-    final incomeCenters = ref
-        .watch(incomeCentersProvider)
-        .where((e) => e.isActive)
-        .toList();
     final products = ref
         .watch(inventoryProductsProvider)
         .where((e) => e.isActive)
@@ -414,10 +397,6 @@ class _InventoryInvoiceCreatePageState
       0,
       (sum, line) => sum + line.lineTotal,
     );
-    final discountTotal =
-        (_parseDouble(_discountAmountController.text) ?? 0) +
-        (_parseDouble(_mealVoucherDiscountController.text) ?? 0);
-    final netTotal = lineTotal - discountTotal;
 
     _selectedBranchId ??=
         session?.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
@@ -463,43 +442,11 @@ class _InventoryInvoiceCreatePageState
               icon: Icons.receipt_long_outlined,
             ),
             _InvoiceMetric(
-              label: 'Net Toplam',
-              value: _money(netTotal < 0 ? 0 : netTotal),
+              label: 'Toplam',
+              value: _money(lineTotal),
               icon: Icons.payments_outlined,
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        _SectionFrame(
-          title: 'Belge Tipi',
-          child: SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: 'purchase_invoice',
-                label: Text('Alış Faturası'),
-                icon: Icon(Icons.receipt_long_outlined),
-              ),
-              ButtonSegment(
-                value: 'purchase_delivery',
-                label: Text('Alış İrsaliyesi'),
-                icon: Icon(Icons.local_shipping_outlined),
-              ),
-              ButtonSegment(
-                value: 'sales_invoice',
-                label: Text('Satış Faturası'),
-                icon: Icon(Icons.point_of_sale_outlined),
-              ),
-              ButtonSegment(
-                value: 'return_invoice',
-                label: Text('İade / Fark'),
-                icon: Icon(Icons.assignment_return_outlined),
-              ),
-            ],
-            selected: {_docKind},
-            onSelectionChanged: _saving
-                ? null
-                : (value) => setState(() => _docKind = value.first),
-          ),
         ),
         const SizedBox(height: 12),
         _SectionFrame(
@@ -509,7 +456,29 @@ class _InventoryInvoiceCreatePageState
             runSpacing: 12,
             children: [
               SizedBox(
-                width: 280,
+                width: 220,
+                child: DropdownButtonFormField<String>(
+                  initialValue: _docKind,
+                  decoration: const InputDecoration(labelText: 'Belge Tipi'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'purchase_invoice',
+                      child: Text('Alış Faturası'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'purchase_delivery',
+                      child: Text('Alış İrsaliyesi'),
+                    ),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() {
+                          if (value != null) _docKind = value;
+                        }),
+                ),
+              ),
+              SizedBox(
+                width: 260,
                 child: DropdownButtonFormField<String>(
                   initialValue: _selectedBranchId,
                   decoration: const InputDecoration(labelText: 'Şube'),
@@ -555,107 +524,6 @@ class _InventoryInvoiceCreatePageState
                   controller: _vendorController,
                   enabled: !_saving,
                   decoration: const InputDecoration(labelText: 'Firma'),
-                ),
-              ),
-              SizedBox(
-                width: 280,
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Ödeme Türü'),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String?>(
-                      isExpanded: true,
-                      value: _paymentTypeId,
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Seçiniz'),
-                        ),
-                        for (final p in paymentTypes)
-                          DropdownMenuItem(value: p.id, child: Text(p.name)),
-                      ],
-                      onChanged: _saving
-                          ? null
-                          : (value) => setState(() => _paymentTypeId = value),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 280,
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Gelir Merkezi'),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String?>(
-                      isExpanded: true,
-                      value: _incomeCenterId,
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Seçiniz'),
-                        ),
-                        for (final g in incomeCenters)
-                          DropdownMenuItem(value: g.id, child: Text(g.name)),
-                      ],
-                      onChanged: _saving
-                          ? null
-                          : (value) => setState(() => _incomeCenterId = value),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 220,
-                child: _DateBox(
-                  label: 'Ödeme Tarihi',
-                  value: _paymentDate,
-                  onTap: _saving
-                      ? () {}
-                      : () async {
-                          final picked = await _pickDate(
-                            context,
-                            initial: _paymentDate,
-                          );
-                          if (picked != null) {
-                            setState(() => _paymentDate = picked);
-                          }
-                        },
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: TextField(
-                  controller: _discountRateController,
-                  enabled: !_saving,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(labelText: 'İndirim (%)'),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: TextField(
-                  controller: _discountAmountController,
-                  enabled: !_saving,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(labelText: 'İndirim Tutar'),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-              SizedBox(
-                width: 180,
-                child: TextField(
-                  controller: _mealVoucherDiscountController,
-                  enabled: !_saving,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Yemek Çeki İndirim',
-                  ),
-                  onChanged: (_) => setState(() {}),
                 ),
               ),
               SizedBox(
@@ -928,14 +796,6 @@ class _InventoryInvoiceCreatePageState
             notes: notesText.isEmpty
                 ? _docKindLabel(_docKind)
                 : '${_docKindLabel(_docKind)} • $notesText',
-            paymentTypeId: _paymentTypeId,
-            incomeCenterId: _incomeCenterId,
-            discountRate: _parseDouble(_discountRateController.text),
-            discountAmount: _parseDouble(_discountAmountController.text),
-            mealVoucherDiscount: _parseDouble(
-              _mealVoucherDiscountController.text,
-            ),
-            paymentDate: _paymentDate,
             lines: [
               for (final line in _lines)
                 (
