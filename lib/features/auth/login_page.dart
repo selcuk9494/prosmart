@@ -73,12 +73,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 960),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isWide = constraints.maxWidth >= 760;
-                    final brand = _BrandPanel(isWide: isWide);
-                    final form = _LoginCard(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _BrandPanel(),
+                    const SizedBox(height: 16),
+                    _LoginCard(
                       formKey: _formKey,
                       selectedCompany: _selectedCompany,
                       usernameController: _usernameController,
@@ -94,28 +95,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         _passwordController.clear();
                         setState(() {});
                       },
-                    );
-
-                    if (!isWide) {
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          brand,
-                          const SizedBox(height: 16),
-                          form,
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: brand),
-                        const SizedBox(width: 16),
-                        SizedBox(width: 390, child: form),
-                      ],
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -127,18 +108,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 }
 
 class _BrandPanel extends StatelessWidget {
-  const _BrandPanel({required this.isWide});
-
-  final bool isWide;
+  const _BrandPanel();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
     return Container(
-      constraints: BoxConstraints(minHeight: isWide ? 420 : 180),
-      padding: EdgeInsets.all(isWide ? 32 : 24),
+      constraints: const BoxConstraints(minHeight: 180),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: const Color(0xFF253444),
         borderRadius: BorderRadius.circular(8),
@@ -154,49 +130,7 @@ class _BrandPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _ProsmartLogoMark(compact: !isWide),
-          if (isWide) ...[
-            const SizedBox(height: 56),
-            Text(
-              'Kasa, şube ve muhasebe kontrolü',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                height: 1.15,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Günlük satış aktarımı, icmal ve onay akışı tek ekranda.',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: Colors.white70,
-                height: 1.45,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.verified_outlined, color: scheme.tertiary),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Prosmart Erp',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          const _ProsmartLogoMark(compact: true),
         ],
       ),
     );
