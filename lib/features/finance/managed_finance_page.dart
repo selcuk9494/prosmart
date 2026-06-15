@@ -7,9 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/stores.dart';
 
 class ManagedFinancePage extends ConsumerStatefulWidget {
-  const ManagedFinancePage({super.key, required this.legacyRef});
+  const ManagedFinancePage({
+    super.key,
+    required this.legacyRef,
+    this.moduleTitle,
+  });
 
   final String legacyRef;
+  final String? moduleTitle;
 
   @override
   ConsumerState<ManagedFinancePage> createState() => _ManagedFinancePageState();
@@ -56,7 +61,11 @@ class _ManagedFinancePageState extends ConsumerState<ManagedFinancePage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _Header(profile: _profile, legacyRef: widget.legacyRef),
+          _Header(
+            title: widget.moduleTitle,
+            profile: _profile,
+            legacyRef: widget.legacyRef,
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 12,
@@ -135,7 +144,7 @@ class _ManagedFinancePageState extends ConsumerState<ManagedFinancePage> {
                   OutlinedButton.icon(
                     onPressed: _refreshScenario,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Senaryo Yenile'),
+                    label: const Text('Listeyi Yenile'),
                   ),
                 ],
               ),
@@ -201,7 +210,7 @@ class _ManagedFinancePageState extends ConsumerState<ManagedFinancePage> {
         '${widget.legacyRef}-${DateTime.now().minute}',
       );
     });
-    _showMessage('Demo finans senaryosu yenilendi.');
+    _showMessage('NBOS işlem listesi yenilendi.');
   }
 
   void _advanceRecord(_FinanceRecord record) {
@@ -401,8 +410,13 @@ class _ManagedFinancePageState extends ConsumerState<ManagedFinancePage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.profile, required this.legacyRef});
+  const _Header({
+    required this.title,
+    required this.profile,
+    required this.legacyRef,
+  });
 
+  final String? title;
   final _ModuleProfile profile;
   final String legacyRef;
 
@@ -425,7 +439,9 @@ class _Header extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    profile.title,
+                    title?.trim().isNotEmpty == true
+                        ? title!.trim()
+                        : profile.title,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 4),

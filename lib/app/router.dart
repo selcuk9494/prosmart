@@ -250,8 +250,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/legacy/:ref',
-            builder: (context, state) =>
-                ManagedFinancePage(legacyRef: state.pathParameters['ref']!),
+            builder: (context, state) => ManagedFinancePage(
+              legacyRef: state.pathParameters['ref']!,
+              moduleTitle: state.uri.queryParameters['title'],
+            ),
           ),
         ],
       ),

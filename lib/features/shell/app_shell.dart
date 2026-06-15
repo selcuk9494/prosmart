@@ -209,11 +209,15 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   _MenuItem _fromCrmNode(CrmMenuNode node) {
+    final route = node.route;
+    final titledRoute = route != null && route.startsWith('/legacy/')
+        ? Uri(path: route, queryParameters: {'title': node.title}).toString()
+        : route;
     return _MenuItem(
       title: node.title,
       subtitle: node.subtitle,
       icon: node.icon,
-      route: node.route,
+      route: titledRoute,
       permissionRef: node.legacyRef ?? node.subtitle,
       enabled: true,
       children: node.children == null
