@@ -92,13 +92,24 @@ class _ReconciliationDetailPageState
     final role = session?.role ?? UserRole.branchUser;
 
     final branches = ref.watch(branchesProvider);
-    final paymentTypes = ref.watch(paymentTypesProvider).where((e) => e.isActive).toList();
-    final expenseTypes = ref.watch(expenseTypesProvider).where((e) => e.isActive).toList();
+    final paymentTypes = ref
+        .watch(paymentTypesProvider)
+        .where((e) => e.isActive)
+        .toList();
+    final expenseTypes = ref
+        .watch(expenseTypesProvider)
+        .where((e) => e.isActive)
+        .toList();
     final items = ref.watch(reconciliationsProvider);
 
-    final item = items.where((e) => e.id == widget.reconciliationId).firstOrNull;
+    final item = items
+        .where((e) => e.id == widget.reconciliationId)
+        .firstOrNull;
     if (item == null) {
-      if (AppConfig.hasApi && !_isLoadingItem && _loadError == null && !_autoRetryOnce) {
+      if (AppConfig.hasApi &&
+          !_isLoadingItem &&
+          _loadError == null &&
+          !_autoRetryOnce) {
         _autoRetryOnce = true;
         Future.microtask(() => _loadItem());
       }
@@ -166,69 +177,99 @@ class _ReconciliationDetailPageState
     final requiresAttachments =
         item.status != ReconciliationStatus.draft && showDiff;
 
-    final posRegisters =
-        ref.watch(posRegisterDailySalesProvider((branchId: item.branchId, date: item.date)));
-    final posPayments =
-        ref.watch(posRegisterDailyPaymentsProvider((branchId: item.branchId, date: item.date)));
-    final posProducts =
-        ref.watch(posDailyProductSalesProvider((branchId: item.branchId, date: item.date, registerCode: _selectedRegisterCode)));
-    final posAdjustments =
-        ref.watch(posDailyAdjustmentsProvider((branchId: item.branchId, date: item.date, registerCode: _selectedRegisterCode)));
-    final posGroups =
-        ref.watch(posDailySalesGroupsProvider((branchId: item.branchId, date: item.date, registerCode: _selectedRegisterCode)));
+    final posRegisters = ref.watch(
+      posRegisterDailySalesProvider((branchId: item.branchId, date: item.date)),
+    );
+    final posPayments = ref.watch(
+      posRegisterDailyPaymentsProvider((
+        branchId: item.branchId,
+        date: item.date,
+      )),
+    );
+    final posProducts = ref.watch(
+      posDailyProductSalesProvider((
+        branchId: item.branchId,
+        date: item.date,
+        registerCode: _selectedRegisterCode,
+      )),
+    );
+    final posAdjustments = ref.watch(
+      posDailyAdjustmentsProvider((
+        branchId: item.branchId,
+        date: item.date,
+        registerCode: _selectedRegisterCode,
+      )),
+    );
+    final posGroups = ref.watch(
+      posDailySalesGroupsProvider((
+        branchId: item.branchId,
+        date: item.date,
+        registerCode: _selectedRegisterCode,
+      )),
+    );
     final posCancelledItems = ref.watch(
-      posCancelledItemsProvider(
-        (
-          branchId: item.branchId,
-          date: item.date,
-          businessDayStartHour: businessDayStartHour,
-          registerCode: _selectedRegisterCode,
-        ),
-      ),
+      posCancelledItemsProvider((
+        branchId: item.branchId,
+        date: item.date,
+        businessDayStartHour: businessDayStartHour,
+        registerCode: _selectedRegisterCode,
+      )),
     );
     final endOfDayReports = ref.watch(endOfDayReportsProvider(item.id));
-    final branchCashRegistersAsync = ref.watch(branchCashRegistersProvider(item.branchId));
+    final branchCashRegistersAsync = ref.watch(
+      branchCashRegistersProvider(item.branchId),
+    );
 
     final liveTotalAsync = (AppConfig.hasApi && isLiveCheckDay)
         ? ref.watch(
-            posLiveDailyTotalProvider(
-              (
-                branchId: item.branchId,
-                date: item.date,
-                businessDayStartHour: businessDayStartHour,
-                registerCode: _selectedRegisterCode,
-              ),
-            ),
+            posLiveDailyTotalProvider((
+              branchId: item.branchId,
+              date: item.date,
+              businessDayStartHour: businessDayStartHour,
+              registerCode: _selectedRegisterCode,
+            )),
           )
         : null;
     final liveTotalNow = liveTotalAsync?.asData?.value;
-    final hasMissingLive = liveTotalNow != null && liveTotalNow > expected + 0.01;
+    final hasMissingLive =
+        liveTotalNow != null && liveTotalNow > expected + 0.01;
     final submitBlockedReason = (isLiveCheckDay && hasMissingLive)
         ? 'Şimdi veya bir sonraki gün satışlar çekilmeden onaya gönderilemez. POS canlı: ${money.format(liveTotalNow)} • Form: ${money.format(expected)}'
         : null;
 
-    final assignedRegisters = branchCashRegistersAsync.asData?.value ?? const <CashRegister>[];
+    final assignedRegisters =
+        branchCashRegistersAsync.asData?.value ?? const <CashRegister>[];
     final assignedByCode = <String, CashRegister>{
       for (final r in assignedRegisters) _normalizeRegisterCode(r.code): r,
     };
-    final assignedCodes = assignedByCode.keys.where((e) => e.isNotEmpty).toSet();
+    final assignedCodes = assignedByCode.keys
+        .where((e) => e.isNotEmpty)
+        .toSet();
     final posRegsNow = posRegisters.asData?.value;
     final posRegsEffective = posRegsNow == null
         ? null
         : (assignedCodes.isEmpty
-            ? posRegsNow
-            : posRegsNow.where((e) => assignedCodes.contains(e.registerCode)).toList());
-    final posSalesNowTotal = posRegsEffective?.fold<double>(0, (p, e) => p + e.grossTotal);
-    final hasMissingSalesNow = isToday &&
+              ? posRegsNow
+              : posRegsNow
+                    .where((e) => assignedCodes.contains(e.registerCode))
+                    .toList());
+    final posSalesNowTotal = posRegsEffective?.fold<double>(
+      0,
+      (p, e) => p + e.grossTotal,
+    );
+    final hasMissingSalesNow =
+        isToday &&
         posSalesNowTotal != null &&
         expected + 0.01 < posSalesNowTotal;
 
-    final posCodes = posRegsNow?.map((e) => e.registerCode).toSet() ?? const <String>{};
+    final posCodes =
+        posRegsNow?.map((e) => e.registerCode).toSet() ?? const <String>{};
     final registerCodes = assignedCodes.isEmpty ? posCodes : assignedCodes;
     final selectedRegisterCode =
-        (_selectedRegisterCode != null && registerCodes.contains(_selectedRegisterCode))
-            ? _selectedRegisterCode
-            : null;
+        (_selectedRegisterCode != null &&
+            registerCodes.contains(_selectedRegisterCode))
+        ? _selectedRegisterCode
+        : null;
 
     Widget registerFilterCard() {
       if (registerCodes.length <= 1) return const SizedBox.shrink();
@@ -245,16 +286,16 @@ class _ReconciliationDetailPageState
               for (final c in (registerCodes.toList()..sort()))
                 DropdownMenuItem<String?>(
                   value: c,
-                  child: Text(
-                    () {
-                      final a = assignedByCode[c];
-                      if (a == null) return c;
-                      return '${a.code} • ${a.name}';
-                    }(),
-                  ),
+                  child: Text(() {
+                    final a = assignedByCode[c];
+                    if (a == null) return c;
+                    return '${a.code} • ${a.name}';
+                  }()),
                 ),
             ],
-            onChanged: !canEdit ? null : (v) => setState(() => _selectedRegisterCode = v),
+            onChanged: !canEdit
+                ? null
+                : (v) => setState(() => _selectedRegisterCode = v),
             decoration: const InputDecoration(
               labelText: 'Kasa',
               prefixIcon: Icon(Icons.point_of_sale_outlined),
@@ -281,10 +322,16 @@ class _ReconciliationDetailPageState
           final selected = _selectedRegisterCode;
           final effectiveRegs = assignedCodes.isEmpty
               ? regs
-              : regs.where((e) => assignedCodes.contains(e.registerCode)).toList();
+              : regs
+                    .where((e) => assignedCodes.contains(e.registerCode))
+                    .toList();
           final sum = selected == null
               ? effectiveRegs.fold<double>(0, (prev, e) => prev + e.grossTotal)
-              : (effectiveRegs.where((e) => e.registerCode == selected).firstOrNull?.grossTotal ?? 0);
+              : (effectiveRegs
+                        .where((e) => e.registerCode == selected)
+                        .firstOrNull
+                        ?.grossTotal ??
+                    0);
           if (sum.abs() > 0.0001) {
             _expectedController.text = sum.toStringAsFixed(2);
             changed = true;
@@ -296,14 +343,18 @@ class _ReconciliationDetailPageState
           return v.abs() > 0.0001;
         });
         if (!hasAnyPayment) {
-          final pts = paymentTypes.where((e) => (e.code ?? '').trim().isNotEmpty).toList();
+          final pts = paymentTypes
+              .where((e) => (e.code ?? '').trim().isNotEmpty)
+              .toList();
           if (pts.isNotEmpty) {
             final totals = <String, double>{};
             for (final r in pays) {
-              if (assignedCodes.isNotEmpty && !assignedCodes.contains(r.registerCode)) {
+              if (assignedCodes.isNotEmpty &&
+                  !assignedCodes.contains(r.registerCode)) {
                 continue;
               }
-              if (_selectedRegisterCode != null && r.registerCode != _selectedRegisterCode) {
+              if (_selectedRegisterCode != null &&
+                  r.registerCode != _selectedRegisterCode) {
                 continue;
               }
               final key = r.paymentCode.trim().toLowerCase();
@@ -370,8 +421,11 @@ class _ReconciliationDetailPageState
                         headingRowColor: WidgetStatePropertyAll(
                           Theme.of(context).colorScheme.primaryContainer,
                         ),
-                        headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        headingTextStyle: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
@@ -456,10 +510,13 @@ class _ReconciliationDetailPageState
     }) {
       return posAdjustments.when(
         data: (items) {
-          final filtered = items
-              .where((e) => allowedKinds.contains(e.kind.trim().toLowerCase()))
-              .toList()
-            ..sort((a, b) => a.kind.compareTo(b.kind));
+          final filtered =
+              items
+                  .where(
+                    (e) => allowedKinds.contains(e.kind.trim().toLowerCase()),
+                  )
+                  .toList()
+                ..sort((a, b) => a.kind.compareTo(b.kind));
 
           if (filtered.isEmpty) {
             return Card(
@@ -483,7 +540,10 @@ class _ReconciliationDetailPageState
                     children: [
                       Icon(icon),
                       const SizedBox(width: 8),
-                      Text(title, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const Spacer(),
                       Chip(label: Text('$totalCount adet')),
                       const SizedBox(width: 8),
@@ -498,8 +558,11 @@ class _ReconciliationDetailPageState
                         headingRowColor: WidgetStatePropertyAll(
                           Theme.of(context).colorScheme.primaryContainer,
                         ),
-                        headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        headingTextStyle: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
@@ -589,7 +652,8 @@ class _ReconciliationDetailPageState
               ),
             );
           }
-          final rows = [...items]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+          final rows = [...items]
+            ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
           return Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -600,7 +664,10 @@ class _ReconciliationDetailPageState
                     children: [
                       const Icon(Icons.playlist_remove_outlined),
                       const SizedBox(width: 8),
-                      Text('Kalem Detayı', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Kalem Detayı',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const Spacer(),
                       Chip(label: Text('${rows.length} satır')),
                     ],
@@ -613,8 +680,11 @@ class _ReconciliationDetailPageState
                         headingRowColor: WidgetStatePropertyAll(
                           Theme.of(context).colorScheme.primaryContainer,
                         ),
-                        headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        headingTextStyle: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
@@ -700,11 +770,13 @@ class _ReconciliationDetailPageState
                   ),
                 );
               }
-              final rows = [...items]..sort((a, b) => a.groupCode.compareTo(b.groupCode));
-              final totalOrders =
-                  rows.fold<int>(0, (p, e) => p + e.orderCount);
-              final totalGross =
-                  rows.fold<double>(0, (p, e) => p + e.grossTotal);
+              final rows = [...items]
+                ..sort((a, b) => a.groupCode.compareTo(b.groupCode));
+              final totalOrders = rows.fold<int>(0, (p, e) => p + e.orderCount);
+              final totalGross = rows.fold<double>(
+                0,
+                (p, e) => p + e.grossTotal,
+              );
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -715,7 +787,10 @@ class _ReconciliationDetailPageState
                         children: [
                           const Icon(Icons.category_outlined),
                           const SizedBox(width: 8),
-                          Text('Grup Satış', style: Theme.of(context).textTheme.titleMedium),
+                          Text(
+                            'Grup Satış',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                           const Spacer(),
                           Chip(label: Text('$totalOrders adet')),
                           const SizedBox(width: 8),
@@ -730,8 +805,13 @@ class _ReconciliationDetailPageState
                             headingRowColor: WidgetStatePropertyAll(
                               Theme.of(context).colorScheme.primaryContainer,
                             ),
-                            headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            headingTextStyle: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
@@ -805,7 +885,9 @@ class _ReconciliationDetailPageState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
-                      hasMissingSalesNow ? Icons.warning_amber_outlined : Icons.info_outline,
+                      hasMissingSalesNow
+                          ? Icons.warning_amber_outlined
+                          : Icons.info_outline,
                       color: hasMissingSalesNow
                           ? Theme.of(context).colorScheme.onErrorContainer
                           : Theme.of(context).colorScheme.onTertiaryContainer,
@@ -817,11 +899,16 @@ class _ReconciliationDetailPageState
                         children: [
                           Text(
                             'Bugün için icmal',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: hasMissingSalesNow
-                                      ? Theme.of(context).colorScheme.onErrorContainer
-                                      : Theme.of(context).colorScheme.onTertiaryContainer,
+                                      ? Theme.of(
+                                          context,
+                                        ).colorScheme.onErrorContainer
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.onTertiaryContainer,
                                 ),
                           ),
                           const SizedBox(height: 6),
@@ -829,10 +916,15 @@ class _ReconciliationDetailPageState
                             hasMissingSalesNow
                                 ? 'Gün bitmeden icmal yapılmış olabilir. Şu anki POS ciro (${money.format(posSalesNowTotal)}) form cirosundan (${money.format(expected)}) yüksek. Eksik satış olabilir. Satışı Çek ile güncelle.'
                                 : 'Gün bitmeden icmal yapılmış olabilir. Satışlar gün içinde artabilir. Satışı Çek ile güncel POS verisini alabilirsiniz.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
                                   color: hasMissingSalesNow
-                                      ? Theme.of(context).colorScheme.onErrorContainer
-                                      : Theme.of(context).colorScheme.onTertiaryContainer,
+                                      ? Theme.of(
+                                          context,
+                                        ).colorScheme.onErrorContainer
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.onTertiaryContainer,
                                 ),
                           ),
                         ],
@@ -902,7 +994,9 @@ class _ReconciliationDetailPageState
                   final expectedField = TextFormField(
                     controller: _expectedController,
                     enabled: canEdit,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: const InputDecoration(
                       labelText: 'Şube Satış Tutarı (Ciro)',
                       prefixIcon: Icon(Icons.receipt_long_outlined),
@@ -911,8 +1005,8 @@ class _ReconciliationDetailPageState
                       border: OutlineInputBorder(),
                     ),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                     textAlign: TextAlign.right,
                     onTap: () {
                       _expectedController.selection = TextSelection(
@@ -934,57 +1028,86 @@ class _ReconciliationDetailPageState
                                 try {
                                   setState(() => _isPullingSales = true);
                                   final dio = ref.read(dioProvider);
-                                  final day = item.date.toIso8601String().substring(0, 10);
+                                  final day = item.date
+                                      .toIso8601String()
+                                      .substring(0, 10);
                                   await dio.post<Map<String, dynamic>>(
                                     '/pos/pull/branch-daily',
                                     data: {
                                       'branchId': item.branchId,
                                       'businessDate': day,
-                                      'businessDayStartHour': businessDayStartHour,
+                                      'businessDayStartHour':
+                                          businessDayStartHour,
                                       'summaryOnly': true,
                                     },
                                   );
 
                                   _prefilledFromPos = false;
 
-                                  final salesArgs = (branchId: item.branchId, date: item.date);
+                                  final salesArgs = (
+                                    branchId: item.branchId,
+                                    date: item.date,
+                                  );
                                   final regs = await ref.refresh(
-                                    posRegisterDailySalesProvider(salesArgs).future,
+                                    posRegisterDailySalesProvider(
+                                      salesArgs,
+                                    ).future,
                                   );
                                   ref.invalidate(
-                                    posRegisterDailyPaymentsProvider(
-                                      (branchId: item.branchId, date: item.date),
-                                    ),
+                                    posRegisterDailyPaymentsProvider((
+                                      branchId: item.branchId,
+                                      date: item.date,
+                                    )),
                                   );
                                   ref.invalidate(
-                                    posDailyProductSalesProvider(
-                                      (branchId: item.branchId, date: item.date, registerCode: _selectedRegisterCode),
-                                    ),
+                                    posDailyProductSalesProvider((
+                                      branchId: item.branchId,
+                                      date: item.date,
+                                      registerCode: _selectedRegisterCode,
+                                    )),
                                   );
                                   ref.invalidate(
-                                    posDailyAdjustmentsProvider(
-                                      (branchId: item.branchId, date: item.date, registerCode: _selectedRegisterCode),
-                                    ),
+                                    posDailyAdjustmentsProvider((
+                                      branchId: item.branchId,
+                                      date: item.date,
+                                      registerCode: _selectedRegisterCode,
+                                    )),
                                   );
                                   ref.invalidate(
-                                    posDailySalesGroupsProvider(
-                                      (branchId: item.branchId, date: item.date, registerCode: _selectedRegisterCode),
-                                    ),
+                                    posDailySalesGroupsProvider((
+                                      branchId: item.branchId,
+                                      date: item.date,
+                                      registerCode: _selectedRegisterCode,
+                                    )),
                                   );
 
                                   final selected = _selectedRegisterCode;
                                   final effectiveRegs = assignedCodes.isEmpty
                                       ? regs
-                                      : regs.where((e) => assignedCodes.contains(e.registerCode)).toList();
+                                      : regs
+                                            .where(
+                                              (e) => assignedCodes.contains(
+                                                e.registerCode,
+                                              ),
+                                            )
+                                            .toList();
                                   final total = selected == null
-                                      ? effectiveRegs.fold<double>(0, (prev, e) => prev + e.grossTotal)
+                                      ? effectiveRegs.fold<double>(
+                                          0,
+                                          (prev, e) => prev + e.grossTotal,
+                                        )
                                       : (effectiveRegs
-                                              .where((e) => e.registerCode == selected)
-                                              .firstOrNull
-                                              ?.grossTotal ??
-                                          0);
+                                                .where(
+                                                  (e) =>
+                                                      e.registerCode ==
+                                                      selected,
+                                                )
+                                                .firstOrNull
+                                                ?.grossTotal ??
+                                            0);
 
-                                  _expectedController.text = total.toStringAsFixed(2);
+                                  _expectedController.text = total
+                                      .toStringAsFixed(2);
                                   await ref
                                       .read(reconciliationsProvider.notifier)
                                       .updateExpectedSalesTotal(
@@ -993,18 +1116,18 @@ class _ReconciliationDetailPageState
                                       );
 
                                   ref.invalidate(
-                                    posDailyProductSalesProvider(
-                                      (
-                                        branchId: item.branchId,
-                                        date: item.date,
-                                        registerCode: _selectedRegisterCode,
-                                      ),
-                                    ),
+                                    posDailyProductSalesProvider((
+                                      branchId: item.branchId,
+                                      date: item.date,
+                                      registerCode: _selectedRegisterCode,
+                                    )),
                                   );
 
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Satış çekildi.')),
+                                    const SnackBar(
+                                      content: Text('Satış çekildi.'),
+                                    ),
                                   );
                                   setState(() {});
                                 } catch (e) {
@@ -1013,7 +1136,9 @@ class _ReconciliationDetailPageState
                                     SnackBar(content: Text('Hata: $e')),
                                   );
                                 } finally {
-                                  if (mounted) setState(() => _isPullingSales = false);
+                                  if (mounted) {
+                                    setState(() => _isPullingSales = false);
+                                  }
                                 }
                               }
                             : null,
@@ -1021,39 +1146,52 @@ class _ReconciliationDetailPageState
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.download),
-                        label: Text(_isPullingSales ? 'Çekiliyor...' : 'Satışı Çek'),
+                        label: Text(
+                          _isPullingSales ? 'Çekiliyor...' : 'Satışı Çek',
+                        ),
                       ),
                       OutlinedButton.icon(
                         onPressed: canEdit
                             ? () {
                                 final pts = paymentTypes
-                                    .where((e) => (e.code ?? '').trim().isNotEmpty)
+                                    .where(
+                                      (e) => (e.code ?? '').trim().isNotEmpty,
+                                    )
                                     .toList();
                                 if (pts.isEmpty) return;
                                 posPayments.whenData((rows) {
                                   final totals = <String, double>{};
                                   for (final r in rows) {
                                     if (assignedCodes.isNotEmpty &&
-                                        !assignedCodes.contains(r.registerCode)) {
+                                        !assignedCodes.contains(
+                                          r.registerCode,
+                                        )) {
                                       continue;
                                     }
                                     if (_selectedRegisterCode != null &&
-                                        r.registerCode != _selectedRegisterCode) {
+                                        r.registerCode !=
+                                            _selectedRegisterCode) {
                                       continue;
                                     }
-                                    final key = r.paymentCode.trim().toLowerCase();
+                                    final key = r.paymentCode
+                                        .trim()
+                                        .toLowerCase();
                                     if (key.isEmpty) continue;
                                     totals[key] = (totals[key] ?? 0) + r.amount;
                                   }
                                   for (final p in pts) {
-                                    final codeKey = (p.code ?? '').trim().toLowerCase();
+                                    final codeKey = (p.code ?? '')
+                                        .trim()
+                                        .toLowerCase();
                                     final amount = totals[codeKey];
                                     if (amount != null) {
-                                      _paymentControllers[p.id]?.text =
-                                          amount.toStringAsFixed(2);
+                                      _paymentControllers[p.id]?.text = amount
+                                          .toStringAsFixed(2);
                                     }
                                   }
                                   setState(() {});
@@ -1064,7 +1202,8 @@ class _ReconciliationDetailPageState
                         label: const Text('POS Ödemeleri'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => DefaultTabController.of(context).animateTo(1),
+                        onPressed: () =>
+                            DefaultTabController.of(context).animateTo(1),
                         icon: const Icon(Icons.shopping_bag_outlined),
                         label: const Text('Ürün Satışları'),
                       ),
@@ -1096,7 +1235,8 @@ class _ReconciliationDetailPageState
                         const SizedBox(height: 10),
                         Text(
                           'Farklılık var. İmzalı evrak ve sayım fişi eklenmeli.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
                                 color: Theme.of(context).colorScheme.error,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1113,7 +1253,9 @@ class _ReconciliationDetailPageState
             data: (items) {
               if (items.isEmpty) return const SizedBox.shrink();
               final posCodes = items.map((e) => e.registerCode).toSet();
-              final registerCodes = assignedCodes.isEmpty ? posCodes : assignedCodes;
+              final registerCodes = assignedCodes.isEmpty
+                  ? posCodes
+                  : assignedCodes;
 
               if (registerCodes.length == 1) {
                 final only = registerCodes.first;
@@ -1125,15 +1267,20 @@ class _ReconciliationDetailPageState
               }
 
               final selected =
-                  (_selectedRegisterCode != null && registerCodes.contains(_selectedRegisterCode))
-                      ? _selectedRegisterCode
-                      : null;
+                  (_selectedRegisterCode != null &&
+                      registerCodes.contains(_selectedRegisterCode))
+                  ? _selectedRegisterCode
+                  : null;
               final effectiveItems = assignedCodes.isEmpty
                   ? items
-                  : items.where((e) => assignedCodes.contains(e.registerCode)).toList();
+                  : items
+                        .where((e) => assignedCodes.contains(e.registerCode))
+                        .toList();
               final shown = selected == null
                   ? effectiveItems
-                  : effectiveItems.where((e) => e.registerCode == selected).toList();
+                  : effectiveItems
+                        .where((e) => e.registerCode == selected)
+                        .toList();
               final total = shown.fold(0.0, (p, e) => p + e.grossTotal);
               return Card(
                 child: Padding(
@@ -1145,7 +1292,10 @@ class _ReconciliationDetailPageState
                         children: [
                           const Icon(Icons.point_of_sale_outlined),
                           const SizedBox(width: 8),
-                          Text('POS Kasa Bazlı Ciro', style: Theme.of(context).textTheme.titleMedium),
+                          Text(
+                            'POS Kasa Bazlı Ciro',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                           const Spacer(),
                           Chip(label: Text(money.format(total))),
                         ],
@@ -1162,13 +1312,11 @@ class _ReconciliationDetailPageState
                             for (final c in (registerCodes.toList()..sort()))
                               DropdownMenuItem<String?>(
                                 value: c,
-                                child: Text(
-                                  () {
-                                    final a = assignedByCode[c];
-                                    if (a == null) return c;
-                                    return '${a.code} • ${a.name}';
-                                  }(),
-                                ),
+                                child: Text(() {
+                                  final a = assignedByCode[c];
+                                  if (a == null) return c;
+                                  return '${a.code} • ${a.name}';
+                                }()),
                               ),
                           ],
                           onChanged: !canEdit
@@ -1187,8 +1335,13 @@ class _ReconciliationDetailPageState
                             headingRowColor: WidgetStatePropertyAll(
                               Theme.of(context).colorScheme.primaryContainer,
                             ),
-                            headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            headingTextStyle: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
@@ -1229,22 +1382,43 @@ class _ReconciliationDetailPageState
               if (items.isEmpty) return const SizedBox.shrink();
               final byBranchRegisters = assignedCodes.isEmpty
                   ? items
-                  : items.where((e) => assignedCodes.contains(e.registerCode)).toList();
+                  : items
+                        .where((e) => assignedCodes.contains(e.registerCode))
+                        .toList();
               final filtered = _selectedRegisterCode == null
                   ? byBranchRegisters
-                  : byBranchRegisters.where((e) => e.registerCode == _selectedRegisterCode).toList();
+                  : byBranchRegisters
+                        .where((e) => e.registerCode == _selectedRegisterCode)
+                        .toList();
               final totals = <String, double>{};
+              final paymentNamesByCode = <String, String>{};
               for (final r in filtered) {
                 final key = r.paymentCode.trim();
                 if (key.isEmpty) continue;
+                final name = r.paymentName?.trim();
+                if (name != null && name.isNotEmpty) {
+                  paymentNamesByCode[key.toLowerCase()] = name;
+                }
                 totals[key] = (totals[key] ?? 0) + r.amount;
               }
-              final sortedKeys = totals.keys.toList()..sort((a, b) => a.compareTo(b));
+              final sortedKeys = totals.keys.toList()
+                ..sort((a, b) => a.compareTo(b));
               final overall = totals.values.fold(0.0, (p, e) => p + e);
               final ptByCode = <String, PaymentType>{
                 for (final p in paymentTypes)
-                  if ((p.code ?? '').trim().isNotEmpty) p.code!.trim().toLowerCase(): p,
+                  if ((p.code ?? '').trim().isNotEmpty)
+                    p.code!.trim().toLowerCase(): p,
               };
+              String paymentLabel(String code) {
+                final key = code.trim().toLowerCase();
+                final branchName = paymentNamesByCode[key];
+                if (branchName != null && branchName.isNotEmpty) {
+                  return branchName;
+                }
+                final p = ptByCode[key];
+                if (p != null) return p.name;
+                return 'Ödeme $code';
+              }
 
               final palette = <Color>[
                 Theme.of(context).colorScheme.primary,
@@ -1255,11 +1429,12 @@ class _ReconciliationDetailPageState
               ];
               final segments = <_DonutSegment>[];
               final pairs = [
-                for (final k in sortedKeys)
-                  MapEntry(k, totals[k] ?? 0),
+                for (final k in sortedKeys) MapEntry(k, totals[k] ?? 0),
               ]..sort((a, b) => b.value.compareTo(a.value));
               final top = pairs.take(5).toList();
-              final otherTotal = pairs.skip(5).fold<double>(0, (p, e) => p + e.value);
+              final otherTotal = pairs
+                  .skip(5)
+                  .fold<double>(0, (p, e) => p + e.value);
               for (var i = 0; i < top.length; i++) {
                 final k = top[i].key;
                 segments.add(
@@ -1316,10 +1491,9 @@ class _ReconciliationDetailPageState
                               for (final s in segments)
                                 _LegendChip(
                                   color: s.color,
-                                  label: () {
-                                    final p = ptByCode[s.label.trim().toLowerCase()];
-                                    return p == null ? s.label : p.name;
-                                  }(),
+                                  label: s.label == 'Diğer'
+                                      ? s.label
+                                      : paymentLabel(s.label),
                                 ),
                             ],
                           ),
@@ -1333,8 +1507,13 @@ class _ReconciliationDetailPageState
                             headingRowColor: WidgetStatePropertyAll(
                               Theme.of(context).colorScheme.primaryContainer,
                             ),
-                            headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            headingTextStyle: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
@@ -1348,13 +1527,16 @@ class _ReconciliationDetailPageState
                               for (final k in sortedKeys)
                                 () {
                                   final amount = totals[k] ?? 0;
-                                  final pct = overall.abs() < 0.0001 ? 0 : (amount / overall) * 100;
-                                  final p = ptByCode[k.trim().toLowerCase()];
+                                  final pct = overall.abs() < 0.0001
+                                      ? 0
+                                      : (amount / overall) * 100;
                                   return DataRow(
                                     cells: [
-                                      DataCell(Text(p?.name ?? k)),
+                                      DataCell(Text(paymentLabel(k))),
                                       DataCell(Text(money.format(amount))),
-                                      DataCell(Text('${pct.toStringAsFixed(1)}%')),
+                                      DataCell(
+                                        Text('${pct.toStringAsFixed(1)}%'),
+                                      ),
                                     ],
                                   );
                                 }(),
@@ -1425,13 +1607,17 @@ class _ReconciliationDetailPageState
                                   withData: true,
                                   type: FileType.image,
                                 );
-                                if (picked == null || picked.files.isEmpty) return;
+                                if (picked == null || picked.files.isEmpty) {
+                                  return;
+                                }
                                 final f = picked.files.first;
                                 final bytes = f.bytes;
                                 if (bytes == null || bytes.isEmpty) {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Dosya okunamadı.')),
+                                    const SnackBar(
+                                      content: Text('Dosya okunamadı.'),
+                                    ),
                                   );
                                   return;
                                 }
@@ -1440,7 +1626,10 @@ class _ReconciliationDetailPageState
                                   setState(() => _isUploadingEndOfDay = true);
                                   final dio = ref.read(dioProvider);
                                   final form = FormData.fromMap({
-                                    'file': MultipartFile.fromBytes(bytes, filename: f.name),
+                                    'file': MultipartFile.fromBytes(
+                                      bytes,
+                                      filename: f.name,
+                                    ),
                                   });
                                   final res = await dio.post<Map<String, dynamic>>(
                                     '/cash-reconciliations/${item.id}/end-of-day/card-from-image',
@@ -1450,24 +1639,27 @@ class _ReconciliationDetailPageState
                                   final rawTotal = data['cardTotal'];
                                   final cardTotal = rawTotal is num
                                       ? rawTotal.toDouble()
-                                      : double.tryParse((rawTotal ?? '').toString()) ?? 0;
+                                      : double.tryParse(
+                                              (rawTotal ?? '').toString(),
+                                            ) ??
+                                            0;
                                   final rawFast = data['fastTotal'];
                                   final fastTotal = rawFast is num
                                       ? rawFast.toDouble()
-                                      : double.tryParse((rawFast ?? '').toString()) ?? 0;
+                                      : double.tryParse(
+                                              (rawFast ?? '').toString(),
+                                            ) ??
+                                            0;
 
-                                  final cardType = paymentTypes.firstWhere(
-                                    (p) {
-                                      final name = p.name.toLowerCase();
-                                      final code = (p.code ?? '').toLowerCase();
-                                      return name.contains('kredi') ||
-                                          name.contains('kart') ||
-                                          code.contains('card') ||
-                                          code.contains('kredi') ||
-                                          code.contains('kk');
-                                    },
-                                    orElse: () => paymentTypes.first,
-                                  );
+                                  final cardType = paymentTypes.firstWhere((p) {
+                                    final name = p.name.toLowerCase();
+                                    final code = (p.code ?? '').toLowerCase();
+                                    return name.contains('kredi') ||
+                                        name.contains('kart') ||
+                                        code.contains('card') ||
+                                        code.contains('kredi') ||
+                                        code.contains('kk');
+                                  }, orElse: () => paymentTypes.first);
                                   _paymentControllers[cardType.id]?.text =
                                       cardTotal.toStringAsFixed(2);
 
@@ -1475,42 +1667,59 @@ class _ReconciliationDetailPageState
                                   for (final p in paymentTypes) {
                                     final name = p.name.toLowerCase();
                                     final code = (p.code ?? '').toLowerCase();
-                                    if (name.contains('fast') || code.contains('fast')) {
+                                    if (name.contains('fast') ||
+                                        code.contains('fast')) {
                                       fastType = p;
                                       break;
                                     }
                                   }
-                                  if (fastType != null && fastTotal.abs() > 0.0001) {
+                                  if (fastType != null &&
+                                      fastTotal.abs() > 0.0001) {
                                     _paymentControllers[fastType.id]?.text =
                                         fastTotal.toStringAsFixed(2);
                                   }
 
                                   final updatedPayments = <MoneyLine>[];
                                   for (final p in paymentTypes) {
-                                    final amount = _parseMoney(_paymentControllers[p.id]?.text ?? '');
+                                    final amount = _parseMoney(
+                                      _paymentControllers[p.id]?.text ?? '',
+                                    );
                                     if (amount.abs() > 0.0001) {
-                                      updatedPayments.add(MoneyLine(typeId: p.id, amount: amount));
+                                      updatedPayments.add(
+                                        MoneyLine(typeId: p.id, amount: amount),
+                                      );
                                     }
                                   }
                                   final updatedExpenses = <MoneyLine>[];
                                   for (final e in expenseTypes) {
-                                    final amount = _parseMoney(_expenseControllers[e.id]?.text ?? '');
+                                    final amount = _parseMoney(
+                                      _expenseControllers[e.id]?.text ?? '',
+                                    );
                                     if (amount.abs() > 0.0001) {
-                                      updatedExpenses.add(MoneyLine(typeId: e.id, amount: amount));
+                                      updatedExpenses.add(
+                                        MoneyLine(typeId: e.id, amount: amount),
+                                      );
                                     }
                                   }
                                   final updated = item.copyWith(
-                                    expectedSalesTotal: _parseMoney(_expectedController.text),
+                                    expectedSalesTotal: _parseMoney(
+                                      _expectedController.text,
+                                    ),
                                     paymentLines: updatedPayments,
                                     expenseLines: updatedExpenses,
                                   );
-                                  await ref.read(reconciliationsProvider.notifier).save(updated);
-                                  ref.invalidate(endOfDayReportsProvider(item.id));
+                                  await ref
+                                      .read(reconciliationsProvider.notifier)
+                                      .save(updated);
+                                  ref.invalidate(
+                                    endOfDayReportsProvider(item.id),
+                                  );
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        fastType != null && fastTotal.abs() > 0.0001
+                                        fastType != null &&
+                                                fastTotal.abs() > 0.0001
                                             ? 'Okundu: ${money.format(cardTotal)} (${cardType.name}) • FAST: ${money.format(fastTotal)}'
                                             : 'Okundu: ${money.format(cardTotal)} (${cardType.name})',
                                       ),
@@ -1523,22 +1732,33 @@ class _ReconciliationDetailPageState
                                   if (context.mounted) {
                                     String msg = 'Günsonu okunamadı: $e';
                                     if (data is Map<String, dynamic>) {
-                                      final err = (data['error'] ?? '').toString();
-                                      final requestId = (data['requestId'] ?? '').toString().trim();
+                                      final err = (data['error'] ?? '')
+                                          .toString();
+                                      final requestId =
+                                          (data['requestId'] ?? '')
+                                              .toString()
+                                              .trim();
                                       if (err == 'DATE_MISMATCH') {
                                         msg =
                                             'Tarih uyuşmuyor. Rapor: ${data['reportDate']} • Form: ${data['expectedDate']}';
                                       } else if (err == 'DATE_NOT_FOUND') {
                                         msg = 'Raporda tarih okunamadı.';
                                       } else if (err == 'DATE_REQUIRED') {
-                                        msg = 'Form tarihi okunamadı. Sayfayı yenileyip tekrar deneyin.';
+                                        msg =
+                                            'Form tarihi okunamadı. Sayfayı yenileyip tekrar deneyin.';
                                       } else if (err == 'EOD_ALREADY_USED') {
-                                        msg = 'Bu günsonu raporu başka bir şubeye eklenmiş. Bu şube için kullanılamaz.';
+                                        msg =
+                                            'Bu günsonu raporu başka bir şubeye eklenmiş. Bu şube için kullanılamaz.';
                                       } else if (err == 'FILE_TOO_LARGE') {
-                                        msg = 'Dosya çok büyük. Daha küçük bir görsel ile tekrar deneyin.';
+                                        msg =
+                                            'Dosya çok büyük. Daha küçük bir görsel ile tekrar deneyin.';
                                       } else if (err == 'OCR_INTERNAL') {
-                                        final detail = (data['message'] ?? '').toString().trim();
-                                        msg = detail.isNotEmpty ? 'Günsonu okunamadı: $detail' : 'Günsonu okunamadı.';
+                                        final detail = (data['message'] ?? '')
+                                            .toString()
+                                            .trim();
+                                        msg = detail.isNotEmpty
+                                            ? 'Günsonu okunamadı: $detail'
+                                            : 'Günsonu okunamadı.';
                                       } else if (err.isNotEmpty) {
                                         msg = 'Günsonu okunamadı: $err';
                                       }
@@ -1546,24 +1766,33 @@ class _ReconciliationDetailPageState
                                         msg = '$msg (Kod: $requestId)';
                                       }
                                     } else if (status == 404) {
-                                      msg = 'Sunucu günsonu OCR endpointini bulamadı (404).';
+                                      msg =
+                                          'Sunucu günsonu OCR endpointini bulamadı (404).';
                                     }
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text(msg)),
                                     );
                                   }
                                 } finally {
-                                  if (mounted) setState(() => _isUploadingEndOfDay = false);
+                                  if (mounted) {
+                                    setState(
+                                      () => _isUploadingEndOfDay = false,
+                                    );
+                                  }
                                 }
                               },
                         icon: _isUploadingEndOfDay
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.document_scanner_outlined),
-                        label: Text(_isUploadingEndOfDay ? 'Okunuyor...' : 'Rapor Yükle'),
+                        label: Text(
+                          _isUploadingEndOfDay ? 'Okunuyor...' : 'Rapor Yükle',
+                        ),
                       ),
                     ],
                   ),
@@ -1581,8 +1810,13 @@ class _ReconciliationDetailPageState
                             headingRowColor: WidgetStatePropertyAll(
                               Theme.of(context).colorScheme.primaryContainer,
                             ),
-                            headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            headingTextStyle: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
@@ -1600,7 +1834,14 @@ class _ReconciliationDetailPageState
                               for (final r in rows.take(30))
                                 DataRow(
                                   cells: [
-                                    DataCell(Text(DateFormat('yyyy-MM-dd', 'tr_TR').format(r.reportDate))),
+                                    DataCell(
+                                      Text(
+                                        DateFormat(
+                                          'yyyy-MM-dd',
+                                          'tr_TR',
+                                        ).format(r.reportDate),
+                                      ),
+                                    ),
                                     DataCell(Text(r.merchantTitle ?? '')),
                                     DataCell(Text(r.workplaceNo ?? '')),
                                     DataCell(Text(r.terminalNo ?? '')),
@@ -1632,50 +1873,31 @@ class _ReconciliationDetailPageState
             ],
           ),
           const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 900;
-                  final itemWidth = isWide ? 360.0 : constraints.maxWidth;
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
+          _MoneyEntrySummaryCard(
+            icon: Icons.account_balance_wallet_outlined,
+            emptyText: 'Muhasebeye gelen ödeme girilmedi.',
+            total: paymentTotal,
+            entries: [
+              for (final p in paymentTypes)
+                _MoneyEntryView(
+                  name: p.name,
+                  amount: _parseMoney(_paymentControllers[p.id]?.text ?? ''),
+                ),
+            ],
+            onEdit: canEdit
+                ? () => _openMoneyEntryDialog(
+                    context,
+                    title: 'Ödeme Gir',
+                    helperText:
+                        'Muhasebeye gelen tutarları ödeme tipine göre yazın.',
+                    icon: Icons.account_balance_wallet_outlined,
+                    entries: [
                       for (final p in paymentTypes)
-                        SizedBox(
-                          width: itemWidth,
-                          child: TextFormField(
-                            controller: _paymentControllers[p.id],
-                            enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: p.name,
-                              prefixIcon: const Icon(Icons.payments_outlined),
-                              suffixText: '₺',
-                              filled: true,
-                              border: const OutlineInputBorder(),
-                            ),
-                            textAlign: TextAlign.right,
-                            onTap: () {
-                              final c = _paymentControllers[p.id];
-                              if (c == null) return;
-                              c.selection = TextSelection(
-                                baseOffset: 0,
-                                extentOffset: c.text.length,
-                              );
-                            },
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ),
+                        _MoneyEntryDef(id: p.id, name: p.name),
                     ],
-                  );
-                },
-              ),
-            ),
+                    controllers: _paymentControllers,
+                  )
+                : null,
           ),
           const SizedBox(height: 12),
           Row(
@@ -1688,50 +1910,31 @@ class _ReconciliationDetailPageState
             ],
           ),
           const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 900;
-                  final itemWidth = isWide ? 360.0 : constraints.maxWidth;
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
+          _MoneyEntrySummaryCard(
+            icon: Icons.receipt_outlined,
+            emptyText: 'Masraf girilmedi.',
+            total: expenseTotal,
+            entries: [
+              for (final e in expenseTypes)
+                _MoneyEntryView(
+                  name: e.name,
+                  amount: _parseMoney(_expenseControllers[e.id]?.text ?? ''),
+                ),
+            ],
+            onEdit: canEdit
+                ? () => _openMoneyEntryDialog(
+                    context,
+                    title: 'Masraf Gir',
+                    helperText:
+                        'Kargo, yemek veya diğer masraf tutarlarını yazın.',
+                    icon: Icons.receipt_outlined,
+                    entries: [
                       for (final e in expenseTypes)
-                        SizedBox(
-                          width: itemWidth,
-                          child: TextFormField(
-                            controller: _expenseControllers[e.id],
-                            enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: e.name,
-                              prefixIcon: const Icon(Icons.remove_circle_outline),
-                              suffixText: '₺',
-                              filled: true,
-                              border: const OutlineInputBorder(),
-                            ),
-                            textAlign: TextAlign.right,
-                            onTap: () {
-                              final c = _expenseControllers[e.id];
-                              if (c == null) return;
-                              c.selection = TextSelection(
-                                baseOffset: 0,
-                                extentOffset: c.text.length,
-                              );
-                            },
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ),
+                        _MoneyEntryDef(id: e.id, name: e.name),
                     ],
-                  );
-                },
-              ),
-            ),
+                    controllers: _expenseControllers,
+                  )
+                : null,
           ),
           const SizedBox(height: 12),
           Text('Evrak', style: Theme.of(context).textTheme.titleMedium),
@@ -1753,11 +1956,15 @@ class _ReconciliationDetailPageState
                             );
                             if (picked == null) return;
                             for (final f in picked.files) {
-                              await ref.read(reconciliationsProvider.notifier).addAttachment(
+                              await ref
+                                  .read(reconciliationsProvider.notifier)
+                                  .addAttachment(
                                     reconciliationId: item.id,
                                     kind: kind,
                                     fileName: f.name,
-                                    mimeType: lookupMimeType(f.name) ?? 'application/octet-stream',
+                                    mimeType:
+                                        lookupMimeType(f.name) ??
+                                        'application/octet-stream',
                                     sizeBytes: f.size,
                                   );
                             }
@@ -1775,7 +1982,9 @@ class _ReconciliationDetailPageState
                         for (final a in item.attachments)
                           ListTile(
                             dense: true,
-                            leading: const Icon(Icons.insert_drive_file_outlined),
+                            leading: const Icon(
+                              Icons.insert_drive_file_outlined,
+                            ),
                             title: Text(a.fileName),
                             subtitle: Text(
                               '${attachmentKindLabel(a.kind)} • ${a.mimeType} • ${(a.sizeBytes / 1024).toStringAsFixed(1)} KB',
@@ -1788,7 +1997,8 @@ class _ReconciliationDetailPageState
             ),
           ),
           const SizedBox(height: 12),
-          if (role == UserRole.manager && item.status == ReconciliationStatus.submitted)
+          if (role == UserRole.manager &&
+              item.status == ReconciliationStatus.submitted)
             _ManagerActions(itemId: item.id)
           else
             _UserActions(
@@ -1822,7 +2032,10 @@ class _ReconciliationDetailPageState
                         onPressed: () => context.go('/reconciliations'),
                         icon: const Icon(Icons.arrow_back),
                       ),
-                      Text('Kasa İcmal', style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        'Kasa İcmal',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                       const SizedBox(width: 12),
                       Chip(label: Text(_statusLabel(item.status))),
                       const Spacer(),
@@ -1832,7 +2045,10 @@ class _ReconciliationDetailPageState
                       ),
                       const SizedBox(width: 8),
                       Chip(
-                        avatar: const Icon(Icons.calendar_month_outlined, size: 16),
+                        avatar: const Icon(
+                          Icons.calendar_month_outlined,
+                          size: 16,
+                        ),
                         label: Text(dateText),
                       ),
                     ],
@@ -1845,12 +2061,17 @@ class _ReconciliationDetailPageState
                         padding: const EdgeInsets.all(12),
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber_outlined, color: scheme.onErrorContainer),
+                            Icon(
+                              Icons.warning_amber_outlined,
+                              color: scheme.onErrorContainer,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 submitBlockedReason,
-                                style: TextStyle(color: scheme.onErrorContainer),
+                                style: TextStyle(
+                                  color: scheme.onErrorContainer,
+                                ),
                               ),
                             ),
                           ],
@@ -1882,9 +2103,18 @@ class _ReconciliationDetailPageState
                 indicatorColor: scheme.primary,
                 tabs: const [
                   Tab(icon: Icon(Icons.receipt_long_outlined), text: 'İcmal'),
-                  Tab(icon: Icon(Icons.shopping_bag_outlined), text: 'Ürün Satışları'),
-                  Tab(icon: Icon(Icons.undo_outlined), text: 'İptal/İade/İkram'),
-                  Tab(icon: Icon(Icons.percent_outlined), text: 'İskonto/İndirim'),
+                  Tab(
+                    icon: Icon(Icons.shopping_bag_outlined),
+                    text: 'Ürün Satışları',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.undo_outlined),
+                    text: 'İptal/İade/İkram',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.percent_outlined),
+                    text: 'İskonto/İndirim',
+                  ),
                   Tab(icon: Icon(Icons.credit_score_outlined), text: 'Borç'),
                   Tab(icon: Icon(Icons.category_outlined), text: 'Grup Satış'),
                 ],
@@ -1934,10 +2164,84 @@ class _ReconciliationDetailPageState
 
   bool _canEdit(CashReconciliation item, AuthSession? session) {
     if (session == null) return false;
-    if (session.role == UserRole.manager) return item.status != ReconciliationStatus.approved;
+    if (session.role == UserRole.manager) {
+      return item.status != ReconciliationStatus.approved;
+    }
     if (item.createdByUserId != session.userId) return false;
     return item.status == ReconciliationStatus.draft ||
         item.status == ReconciliationStatus.rejected;
+  }
+
+  Future<void> _openMoneyEntryDialog(
+    BuildContext context, {
+    required String title,
+    required String helperText,
+    required IconData icon,
+    required List<_MoneyEntryDef> entries,
+    required Map<String, TextEditingController> controllers,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          icon: Icon(icon),
+          title: Text(title),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(helperText),
+                  const SizedBox(height: 16),
+                  for (final entry in entries) ...[
+                    TextFormField(
+                      controller: controllers[entry.id],
+                      autofocus: entry == entries.first,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: entry.name,
+                        hintText: 'Örn. 1250,50',
+                        prefixIcon: const Icon(Icons.payments_outlined),
+                        suffixText: 'TL',
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                      ),
+                      textAlign: TextAlign.right,
+                      onTap: () {
+                        final c = controllers[entry.id];
+                        if (c == null) return;
+                        c.selection = TextSelection(
+                          baseOffset: 0,
+                          extentOffset: c.text.length,
+                        );
+                      },
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Kapat'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              icon: const Icon(Icons.check),
+              label: const Text('Tamam'),
+            ),
+          ],
+        );
+      },
+    );
+    if (mounted) setState(() {});
   }
 
   void _ensureControllers(
@@ -1945,8 +2249,9 @@ class _ReconciliationDetailPageState
     List<PaymentType> paymentTypes,
     List<ExpenseType> expenseTypes,
   ) {
-    _expectedController.text =
-        _expectedController.text.isEmpty ? item.expectedSalesTotal.toStringAsFixed(2) : _expectedController.text;
+    _expectedController.text = _expectedController.text.isEmpty
+        ? item.expectedSalesTotal.toStringAsFixed(2)
+        : _expectedController.text;
 
     final paymentMap = {for (final l in item.paymentLines) l.typeId: l.amount};
     for (final p in paymentTypes) {
@@ -2000,7 +2305,8 @@ class _ReconciliationDetailPageState
           title: const Text('Evrak Türü'),
           children: [
             SimpleDialogOption(
-              onPressed: () => Navigator.of(context).pop(AttachmentKind.countSlip),
+              onPressed: () =>
+                  Navigator.of(context).pop(AttachmentKind.countSlip),
               child: const Text('Para sayım fişi'),
             ),
             SimpleDialogOption(
@@ -2085,11 +2391,13 @@ class _UserActions extends ConsumerWidget {
               child: FilledButton.icon(
                 onPressed: () async {
                   final updated = _buildUpdated(item);
-                  await ref.read(reconciliationsProvider.notifier).save(updated);
+                  await ref
+                      .read(reconciliationsProvider.notifier)
+                      .save(updated);
                   if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Kaydedildi.')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Kaydedildi.')));
                 },
                 icon: const Icon(Icons.save),
                 label: const Text('Kaydet'),
@@ -2103,9 +2411,13 @@ class _UserActions extends ConsumerWidget {
                     : () async {
                         final updated = _buildUpdated(item);
                         final hasDiff =
-                            (updated.paymentTotal - updated.expectedSalesTotal).abs() > 0.01;
+                            (updated.paymentTotal - updated.expectedSalesTotal)
+                                .abs() >
+                            0.01;
                         if (hasDiff) {
-                          final missing = missingRequiredAttachmentKinds(updated);
+                          final missing = missingRequiredAttachmentKinds(
+                            updated,
+                          );
                           if (missing.isNotEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -2117,8 +2429,12 @@ class _UserActions extends ConsumerWidget {
                             return;
                           }
                         }
-                        await ref.read(reconciliationsProvider.notifier).save(updated);
-                        await ref.read(reconciliationsProvider.notifier).submit(updated.id);
+                        await ref
+                            .read(reconciliationsProvider.notifier)
+                            .save(updated);
+                        await ref
+                            .read(reconciliationsProvider.notifier)
+                            .submit(updated.id);
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Onaya gönderildi.')),
@@ -2194,7 +2510,9 @@ class _ManagerActionsState extends ConsumerState<_ManagerActions> {
     }
 
     final hasDiff = item.difference.abs() > 0.01;
-    final missing = hasDiff ? missingRequiredAttachmentKinds(item) : const <AttachmentKind>[];
+    final missing = hasDiff
+        ? missingRequiredAttachmentKinds(item)
+        : const <AttachmentKind>[];
     final missingAttachment = missing.isNotEmpty;
 
     return Card(
@@ -2207,9 +2525,9 @@ class _ManagerActionsState extends ConsumerState<_ManagerActions> {
               Text(
                 'Fark var. Onay için evraklar tamamlanmalı: ${missing.map(attachmentKindLabel).join(', ')}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             Row(
               children: [
@@ -2218,7 +2536,9 @@ class _ManagerActionsState extends ConsumerState<_ManagerActions> {
                     onPressed: missingAttachment
                         ? null
                         : () async {
-                            await ref.read(reconciliationsProvider.notifier).approve(item.id);
+                            await ref
+                                .read(reconciliationsProvider.notifier)
+                                .approve(item.id);
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Onaylandı.')),
@@ -2264,9 +2584,7 @@ class _ManagerActionsState extends ConsumerState<_ManagerActions> {
           title: const Text('Red Nedeni'),
           content: TextField(
             controller: _reasonController,
-            decoration: const InputDecoration(
-              labelText: 'Açıklama',
-            ),
+            decoration: const InputDecoration(labelText: 'Açıklama'),
             maxLines: 3,
           ),
           actions: [
@@ -2275,7 +2593,8 @@ class _ManagerActionsState extends ConsumerState<_ManagerActions> {
               child: const Text('İptal'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(_reasonController.text),
+              onPressed: () =>
+                  Navigator.of(context).pop(_reasonController.text),
               child: const Text('Reddet'),
             ),
           ],
@@ -2346,15 +2665,15 @@ class _MetricCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
@@ -2386,10 +2705,7 @@ class _LegendChip extends StatelessWidget {
           Container(
             width: 10,
             height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
           Text(label),
@@ -2399,8 +2715,98 @@ class _LegendChip extends StatelessWidget {
   }
 }
 
+class _MoneyEntryDef {
+  const _MoneyEntryDef({required this.id, required this.name});
+
+  final String id;
+  final String name;
+}
+
+class _MoneyEntryView {
+  const _MoneyEntryView({required this.name, required this.amount});
+
+  final String name;
+  final double amount;
+}
+
+class _MoneyEntrySummaryCard extends StatelessWidget {
+  const _MoneyEntrySummaryCard({
+    required this.icon,
+    required this.emptyText,
+    required this.total,
+    required this.entries,
+    required this.onEdit,
+  });
+
+  final IconData icon;
+  final String emptyText;
+  final double total;
+  final List<_MoneyEntryView> entries;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final money = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
+    final filled = entries.where((e) => e.amount.abs() > 0.0001).toList();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(icon),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    filled.isEmpty
+                        ? emptyText
+                        : '${filled.length} kalem girildi',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  money.format(total),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: Text(filled.isEmpty ? 'Gir' : 'Düzenle'),
+                ),
+              ],
+            ),
+            if (filled.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final entry in filled)
+                    Chip(
+                      label: Text(
+                        '${entry.name}: ${money.format(entry.amount)}',
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DonutSegment {
-  const _DonutSegment({required this.label, required this.value, required this.color});
+  const _DonutSegment({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final String label;
   final double value;
   final Color color;
@@ -2426,15 +2832,15 @@ class _DonutChart extends StatelessWidget {
           children: [
             Text(
               total.toStringAsFixed(0),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             Text(
               'Ödeme tipi',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -2485,7 +2891,9 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) {
-    return oldDelegate.total != total || oldDelegate.segments != segments || oldDelegate.trackColor != trackColor;
+    return oldDelegate.total != total ||
+        oldDelegate.segments != segments ||
+        oldDelegate.trackColor != trackColor;
   }
 }
 

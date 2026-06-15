@@ -416,10 +416,12 @@ class PosRegisterDailyPayment {
     required this.registerCode,
     required this.paymentCode,
     required this.amount,
+    this.paymentName,
   });
 
   final String registerCode;
   final String paymentCode;
+  final String? paymentName;
   final double amount;
 }
 

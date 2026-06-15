@@ -2316,6 +2316,46 @@ async function pullBranchDailyPos({ branchId, businessDate, source, businessDayS
   }
 }
 
+async function getBranchPaymentNameMap(cfg) {
+  const ssl = cfg.ssl ? { rejectUnauthorized: false } : false;
+  const branchPool = new pg.Pool({
+    host: cfg.host,
+    port: Number(cfg.port ?? 5432),
+    user: cfg.username,
+    password: (cfg.password ?? '').toString(),
+    database: cfg.database,
+    max: 1,
+    idleTimeoutMillis: 5_000,
+    connectionTimeoutMillis: 8_000,
+    ssl,
+  });
+
+  try {
+    const rows = await branchPool.query(
+      `
+      select
+        odmno::text as code,
+        nullif(trim(coalesce(odmname, '')), '') as name
+      from ads_odmsekli
+      where odmno is not null
+      order by odmno asc
+      `,
+    );
+    return new Map(
+      (rows.rows ?? [])
+        .filter((row) => row.code && row.name)
+        .map((row) => [
+          row.code.toString().trim(),
+          row.name.toString().trim(),
+        ]),
+    );
+  } catch {
+    return new Map();
+  } finally {
+    await branchPool.end();
+  }
+}
+
 app.get(
   '/cron/pos/pull',
   cronJobAuthRequired,
@@ -5518,7 +5558,21 @@ app.get(
       [branchId, date],
     );
 
-    res.json(rows);
+    let paymentNames = new Map();
+    try {
+      const cfg = await getBranchDataSourceConfig(branchId);
+      if (cfg?.isActive) {
+        paymentNames = await getBranchPaymentNameMap(cfg);
+      }
+    } catch {}
+
+    res.json(
+      rows.map((row) => {
+        const code = (row.paymentCode ?? '').toString().trim();
+        const paymentName = paymentNames.get(code) ?? null;
+        return paymentName ? { ...row, paymentName } : row;
+      }),
+    );
   }),
 );
 

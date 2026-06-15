@@ -2216,6 +2216,7 @@ final posRegisterDailyPaymentsProvider =
             PosRegisterDailyPayment(
               registerCode: (raw['registerCode'] ?? '').toString(),
               paymentCode: (raw['paymentCode'] ?? '').toString(),
+              paymentName: raw['paymentName']?.toString(),
               amount: _numToDouble(raw['amount']),
             ),
       ];
