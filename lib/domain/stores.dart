@@ -1880,6 +1880,9 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
       ocrFastTotalCached: _numToDouble(m['ocrFastTotal']),
       hasEndOfDayReportCached: (m['hasEndOfDayReport'] as bool?) ?? false,
       manualCardTotalCached: _numToDouble(m['manualCardTotal']),
+      lastSalesPulledAt: m['lastSalesPulledAt'] == null
+          ? null
+          : DateTime.tryParse(m['lastSalesPulledAt'].toString()),
     );
   }
 
@@ -1933,6 +1936,9 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
       rejectionReason: m['rejectionReason']?.toString(),
       paymentTotalCached: null,
       attachmentsCountCached: attachments.length,
+      lastSalesPulledAt: m['lastSalesPulledAt'] == null
+          ? null
+          : DateTime.tryParse(m['lastSalesPulledAt'].toString()),
     );
   }
 

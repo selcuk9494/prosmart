@@ -553,6 +553,7 @@ class CashReconciliation {
     this.ocrFastTotalCached,
     this.hasEndOfDayReportCached,
     this.manualCardTotalCached,
+    this.lastSalesPulledAt,
   });
 
   final String id;
@@ -572,6 +573,7 @@ class CashReconciliation {
   final double? ocrFastTotalCached;
   final bool? hasEndOfDayReportCached;
   final double? manualCardTotalCached;
+  final DateTime? lastSalesPulledAt;
 
   double get paymentTotal {
     if (paymentLines.isNotEmpty) {
@@ -609,6 +611,7 @@ class CashReconciliation {
     double? ocrFastTotalCached,
     bool? hasEndOfDayReportCached,
     double? manualCardTotalCached,
+    DateTime? lastSalesPulledAt,
   }) {
     return CashReconciliation(
       id: id ?? this.id,
@@ -631,6 +634,7 @@ class CashReconciliation {
           hasEndOfDayReportCached ?? this.hasEndOfDayReportCached,
       manualCardTotalCached:
           manualCardTotalCached ?? this.manualCardTotalCached,
+      lastSalesPulledAt: lastSalesPulledAt ?? this.lastSalesPulledAt,
     );
   }
 }

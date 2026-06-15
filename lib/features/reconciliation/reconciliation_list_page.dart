@@ -520,6 +520,7 @@ class _ReconciliationListPageState
                       DataColumn(label: Text('Şube')),
                       DataColumn(label: Text('Durum')),
                       DataColumn(label: Text('Satış')),
+                      DataColumn(label: Text('Son Çekim')),
                       DataColumn(label: Text('KK OCR')),
                       DataColumn(label: Text('KK Manuel')),
                       DataColumn(label: Text('Ödeme')),
@@ -580,6 +581,18 @@ class _ReconciliationListPageState
                               DataCell(Text(statusLabel(r.status))),
                               DataCell(
                                 Text(money.format(r.expectedSalesTotal)),
+                              ),
+                              DataCell(
+                                Text(
+                                  r.lastSalesPulledAt == null
+                                      ? 'Henüz yok'
+                                      : DateFormat(
+                                          'dd MMM HH:mm',
+                                          'tr_TR',
+                                        ).format(
+                                          r.lastSalesPulledAt!.toLocal(),
+                                        ),
+                                ),
                               ),
                               DataCell(
                                 Text(hasOcr ? money.format(ocrCard) : ''),

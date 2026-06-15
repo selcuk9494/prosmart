@@ -6339,6 +6339,39 @@ app.get(
         created_at
       from pos_end_of_day_reports
       order by reconciliation_id, created_at desc
+    ),
+    last_pos_pull as (
+      select
+        branch_id,
+        business_date,
+        max(last_pulled_at) as last_pulled_at
+      from (
+        select branch_id, business_date, max(updated_at) as last_pulled_at
+        from pos_register_daily_sales
+        where source = 'pos'
+        group by branch_id, business_date
+        union all
+        select branch_id, business_date, max(updated_at) as last_pulled_at
+        from pos_register_daily_payments
+        where source = 'pos'
+        group by branch_id, business_date
+        union all
+        select branch_id, business_date, max(updated_at) as last_pulled_at
+        from pos_register_daily_product_sales
+        where source = 'pos'
+        group by branch_id, business_date
+        union all
+        select branch_id, business_date, max(updated_at) as last_pulled_at
+        from pos_register_daily_adjustments
+        where source = 'pos'
+        group by branch_id, business_date
+        union all
+        select branch_id, business_date, max(updated_at) as last_pulled_at
+        from pos_register_daily_sales_groups
+        where source = 'pos'
+        group by branch_id, business_date
+      ) pulls
+      group by branch_id, business_date
     )
     select
       r.id,
@@ -6357,12 +6390,16 @@ app.get(
       coalesce(le.card_total,0) as "ocrCardTotal",
       coalesce(le.fast_total,0) as "ocrFastTotal",
       (le.reconciliation_id is not null) as "hasEndOfDayReport",
-      coalesce(mct.manual_card_total,0) as "manualCardTotal"
+      coalesce(mct.manual_card_total,0) as "manualCardTotal",
+      lpp.last_pulled_at as "lastSalesPulledAt"
     from cash_reconciliations r
     left join payment_totals pt on pt.reconciliation_id = r.id
     left join attachment_info ai on ai.reconciliation_id = r.id
     left join latest_eod le on le.reconciliation_id = r.id
     left join manual_card_totals mct on mct.reconciliation_id = r.id
+    left join last_pos_pull lpp
+      on lpp.branch_id = r.branch_id
+      and lpp.business_date = r.business_date
     ${where}
     order by r.business_date desc, r.created_at desc
     limit 500
