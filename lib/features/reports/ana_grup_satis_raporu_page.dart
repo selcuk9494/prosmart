@@ -9,10 +9,12 @@ class AnaGrupSatisRaporuPage extends ConsumerStatefulWidget {
   const AnaGrupSatisRaporuPage({super.key});
 
   @override
-  ConsumerState<AnaGrupSatisRaporuPage> createState() => _AnaGrupSatisRaporuPageState();
+  ConsumerState<AnaGrupSatisRaporuPage> createState() =>
+      _AnaGrupSatisRaporuPageState();
 }
 
-class _AnaGrupSatisRaporuPageState extends ConsumerState<AnaGrupSatisRaporuPage> {
+class _AnaGrupSatisRaporuPageState
+    extends ConsumerState<AnaGrupSatisRaporuPage> {
   DateTime _from = DateTime.now();
   DateTime _to = DateTime.now();
   String? _selectedBranchId;
@@ -26,7 +28,10 @@ class _AnaGrupSatisRaporuPageState extends ConsumerState<AnaGrupSatisRaporuPage>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Ana Grup Satış Raporu', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Ana Grup Satış Raporu',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 12),
         Card(
           child: Padding(
@@ -55,7 +60,9 @@ class _AnaGrupSatisRaporuPageState extends ConsumerState<AnaGrupSatisRaporuPage>
                                 Expanded(
                                   child: DropdownButtonFormField<String?>(
                                     initialValue: _selectedBranchId,
-                                    decoration: const InputDecoration(labelText: 'Şube'),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Şube',
+                                    ),
                                     items: [
                                       const DropdownMenuItem(
                                         value: null,
@@ -67,7 +74,8 @@ class _AnaGrupSatisRaporuPageState extends ConsumerState<AnaGrupSatisRaporuPage>
                                           child: Text(b.name),
                                         ),
                                     ],
-                                    onChanged: (v) => setState(() => _selectedBranchId = v),
+                                    onChanged: (v) =>
+                                        setState(() => _selectedBranchId = v),
                                   ),
                                 ),
                               ],
@@ -114,20 +122,30 @@ class _AnaGrupSatisRaporuPageState extends ConsumerState<AnaGrupSatisRaporuPage>
                               height: 210,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                border: Border.all(color: const Color(0xFFBDBDBD)),
+                                border: Border.all(
+                                  color: const Color(0xFFBDBDBD),
+                                ),
                               ),
-                              child: ListView(
-                                children: [
-                                  for (final b in branches)
-                                    ListTile(
-                                      dense: true,
-                                      title: Text(b.name),
-                                      trailing: _selectedBranchId == b.id
-                                          ? const Icon(Icons.check_circle, size: 18)
-                                          : null,
-                                      onTap: () => setState(() => _selectedBranchId = b.id),
-                                    ),
-                                ],
+                              child: Material(
+                                color: Colors.transparent,
+                                child: ListView(
+                                  children: [
+                                    for (final b in branches)
+                                      ListTile(
+                                        dense: true,
+                                        title: Text(b.name),
+                                        trailing: _selectedBranchId == b.id
+                                            ? const Icon(
+                                                Icons.check_circle,
+                                                size: 18,
+                                              )
+                                            : null,
+                                        onTap: () => setState(
+                                          () => _selectedBranchId = b.id,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -245,9 +263,9 @@ class _AnaGrupSatisRaporuPageState extends ConsumerState<AnaGrupSatisRaporuPage>
       ];
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Rapor alınamadı: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Rapor alınamadı: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -317,20 +335,14 @@ class _DateRow extends StatelessWidget {
         Expanded(
           child: InputDecorator(
             decoration: InputDecoration(labelText: '$label I'),
-            child: InkWell(
-              onTap: onPickFrom,
-              child: Text(_fmt(from)),
-            ),
+            child: InkWell(onTap: onPickFrom, child: Text(_fmt(from))),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: InputDecorator(
             decoration: InputDecoration(labelText: '$label II'),
-            child: InkWell(
-              onTap: onPickTo,
-              child: Text(_fmt(to)),
-            ),
+            child: InkWell(onTap: onPickTo, child: Text(_fmt(to))),
           ),
         ),
       ],

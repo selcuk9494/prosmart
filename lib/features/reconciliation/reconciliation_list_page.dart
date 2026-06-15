@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,7 +25,8 @@ class ReconciliationListPage extends ConsumerStatefulWidget {
       _ReconciliationListPageState();
 }
 
-class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage> {
+class _ReconciliationListPageState
+    extends ConsumerState<ReconciliationListPage> {
   static DateTime? _persistFromDate;
   static DateTime? _persistToDate;
   static String? _persistBranchId;
@@ -50,6 +52,27 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
     return 0;
   }
 
+  String _friendlyError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      final code = data is Map
+          ? (data['code'] ?? data['error'])?.toString()
+          : null;
+      if (code == 'INTEGRATION_SECRET_REQUIRED') {
+        return 'entegrasyon anahtarı eksik';
+      }
+      if (code == 'BRANCH_DATA_SOURCE_NOT_FOUND' || code == 'BRANCH_REQUIRED') {
+        return 'şube POS bağlantısı tanımlı değil';
+      }
+      if (code == 'FORBIDDEN') return 'yetki yok';
+      final status = error.response?.statusCode;
+      if (status == 500) return 'POS aktarımı sırasında sunucu hatası';
+      if (status != null) return 'HTTP $status';
+      return error.message ?? 'bağlantı hatası';
+    }
+    return error.toString();
+  }
+
   Color _dayColor(DateTime d) {
     final key = d.year * 10000 + d.month * 100 + d.day;
     const palette = <Color>[
@@ -73,7 +96,8 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
   void initState() {
     super.initState();
     final today = DateTime.now();
-    _fromDate = _persistFromDate ?? DateTime(today.year, today.month, today.day);
+    _fromDate =
+        _persistFromDate ?? DateTime(today.year, today.month, today.day);
     _toDate = _persistToDate ?? DateTime(today.year, today.month, today.day);
     _branchId = _persistBranchId;
     _status = _persistStatus;
@@ -86,7 +110,29 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
     super.didChangeDependencies();
     if (_appliedQuery) return;
     final uri = GoRouterState.of(context).uri;
+    DateTime? parseQueryDate(String? raw) {
+      final v = raw?.trim();
+      if (v == null || v.isEmpty) return null;
+      final parsed = DateTime.tryParse(v);
+      if (parsed == null) return null;
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    }
+
+    final fromRaw = uri.queryParameters['from'] ?? uri.queryParameters['date'];
+    final toRaw = uri.queryParameters['to'] ?? uri.queryParameters['date'];
+    final fromQuery = parseQueryDate(fromRaw);
+    final toQuery = parseQueryDate(toRaw);
+    if (fromQuery != null) {
+      _fromDate = fromQuery;
+    }
+    if (toQuery != null) {
+      _toDate = toQuery;
+    }
     final statusRaw = uri.queryParameters['status']?.trim().toLowerCase();
+    final branchIdRaw = uri.queryParameters['branchId']?.trim();
+    if (branchIdRaw != null && branchIdRaw.isNotEmpty) {
+      _branchId = branchIdRaw;
+    }
     if (statusRaw != null && statusRaw.isNotEmpty) {
       _status = switch (statusRaw) {
         'draft' => ReconciliationStatus.draft,
@@ -96,11 +142,15 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
         _ => _status,
       };
     }
-    final onlyMissingDocsRaw = uri.queryParameters['onlyMissingDocs']?.trim().toLowerCase();
+    final onlyMissingDocsRaw = uri.queryParameters['onlyMissingDocs']
+        ?.trim()
+        .toLowerCase();
     if (onlyMissingDocsRaw == '1' || onlyMissingDocsRaw == 'true') {
       _onlyMissingDocs = true;
     }
-    final onlyMismatchedRaw = uri.queryParameters['onlyMismatched']?.trim().toLowerCase();
+    final onlyMismatchedRaw = uri.queryParameters['onlyMismatched']
+        ?.trim()
+        .toLowerCase();
     if (onlyMismatchedRaw == '1' || onlyMismatchedRaw == 'true') {
       _onlyMismatched = true;
     }
@@ -124,14 +174,20 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
     final money = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
     final filtered = _applyFilters(scoped);
     final showDailyOverview =
-        _fromDate != null && _toDate != null && _isSameDay(_fromDate!, _toDate!);
+        _fromDate != null &&
+        _toDate != null &&
+        _isSameDay(_fromDate!, _toDate!);
 
     Future<void> bulkUpdateOrCreate() async {
       if (!AppConfig.hasApi) return;
       if (_isBulkUpdating) return;
       if (session == null) return;
-      final from = _fromDate == null ? null : DateTime(_fromDate!.year, _fromDate!.month, _fromDate!.day);
-      final to = _toDate == null ? null : DateTime(_toDate!.year, _toDate!.month, _toDate!.day);
+      final from = _fromDate == null
+          ? null
+          : DateTime(_fromDate!.year, _fromDate!.month, _fromDate!.day);
+      final to = _toDate == null
+          ? null
+          : DateTime(_toDate!.year, _toDate!.month, _toDate!.day);
       if (from == null || to == null) return;
 
       final activeBranches = branches.where((e) => e.isActive).toList();
@@ -146,7 +202,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
         }
         return activeBranches;
       })();
-      if (role != UserRole.branchUser && _branchId != null && branchTargets.isEmpty) {
+      if (role != UserRole.branchUser &&
+          _branchId != null &&
+          branchTargets.isEmpty) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Seçili şube bulunamadı veya pasif.')),
@@ -171,7 +229,8 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
 
       final known = <String, String>{
         for (final r in all)
-          '${r.branchId}:${DateFormat('yyyy-MM-dd', 'tr_TR').format(DateTime(r.date.year, r.date.month, r.date.day))}': r.id,
+          '${r.branchId}:${DateFormat('yyyy-MM-dd', 'tr_TR').format(DateTime(r.date.year, r.date.month, r.date.day))}':
+              r.id,
       };
       var createdCount = 0;
       var touchedCount = 0;
@@ -189,7 +248,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
       if (context.mounted) {
         final targetLabel = _branchId == null
             ? 'Tüm Şubeler'
-            : (branchTargets.isNotEmpty ? branchTargets.first.name : 'Seçili Şube');
+            : (branchTargets.isNotEmpty
+                  ? branchTargets.first.name
+                  : 'Seçili Şube');
         final rangeLabel = dates.length == 1
             ? DateFormat('yyyy-MM-dd', 'tr_TR').format(dates.first)
             : '${DateFormat('yyyy-MM-dd', 'tr_TR').format(dates.first)} → ${DateFormat('yyyy-MM-dd', 'tr_TR').format(dates.last)}';
@@ -213,10 +274,7 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
             try {
               final created = await dio.post<Map<String, dynamic>>(
                 '/cash-reconciliations',
-                data: {
-                  'branchId': b.id,
-                  'businessDate': dayStr,
-                },
+                data: {'branchId': b.id, 'businessDate': dayStr},
               );
               final id = created.data?['id']?.toString();
               if (id == null || id.isEmpty) {
@@ -225,7 +283,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
 
               CashReconciliation? recon;
               try {
-                recon = await ref.read(reconciliationsProvider.notifier).fetchById(id);
+                recon = await ref
+                    .read(reconciliationsProvider.notifier)
+                    .fetchById(id);
                 ref.read(reconciliationsProvider.notifier).upsertLocal(recon);
               } catch (_) {}
 
@@ -249,12 +309,16 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                   status: ReconciliationStatus.draft,
                   createdByUserId: session.userId,
                 );
-                ref.read(reconciliationsProvider.notifier).upsertLocal(placeholder);
+                ref
+                    .read(reconciliationsProvider.notifier)
+                    .upsertLocal(placeholder);
               }
 
               final status = recon?.status;
               final canEditSales =
-                  status == null || status == ReconciliationStatus.draft || status == ReconciliationStatus.rejected;
+                  status == null ||
+                  status == ReconciliationStatus.draft ||
+                  status == ReconciliationStatus.rejected;
 
               if (canEditSales) {
                 final pullRes = await dio.post<Map<String, dynamic>>(
@@ -263,20 +327,18 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                     'branchId': b.id,
                     'businessDate': dayStr,
                     'businessDayStartHour': b.businessDayStartHour,
+                    'summaryOnly': true,
                   },
                 );
                 pulledCount += 1;
 
                 final pullData = pullRes.data ?? const {};
                 var totalSales = _numToDoubleLocal(pullData['dailyTotal']);
-                if (totalSales.abs() <= 0.0001) {
+                if (!pullData.containsKey('dailyTotal')) {
                   try {
                     final regs = await dio.get<List<dynamic>>(
                       '/sales/daily/registers',
-                      queryParameters: {
-                        'branchId': b.id,
-                        'date': dayStr,
-                      },
+                      queryParameters: {'branchId': b.id, 'date': dayStr},
                     );
                     final rows = regs.data ?? const [];
                     totalSales = 0.0;
@@ -287,40 +349,43 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                   } catch (_) {}
                 }
 
-                if (totalSales.abs() > 0.0001) {
-                  await ref.read(reconciliationsProvider.notifier).updateExpectedSalesTotal(
-                        id: id,
-                        expectedSalesTotal: totalSales,
-                      );
-                }
+                await ref
+                    .read(reconciliationsProvider.notifier)
+                    .updateExpectedSalesTotal(
+                      id: id,
+                      expectedSalesTotal: totalSales,
+                    );
               } else {
                 skippedLockedCount += 1;
               }
             } catch (e) {
-              lastError = e.toString();
+              lastError = '${b.name} $dayStr: ${_friendlyError(e)}';
             } finally {
-              if (!mounted) return;
-              setState(() => _bulkDone += 1);
+              if (mounted) {
+                setState(() => _bulkDone += 1);
+              }
             }
           }
         }
       } finally {
-        if (!mounted) return;
-        setState(() {
-          _isBulkUpdating = false;
-          _bulkCurrentLabel = null;
-        });
-        if (!context.mounted) return;
-        final msg = [
-          if (createdCount > 0) 'Açılan: $createdCount',
-          if (touchedCount > 0) 'Güncellenen: $touchedCount',
-          if (pulledCount > 0) 'Satış çekilen: $pulledCount',
-          if (skippedLockedCount > 0) 'Kilitli atlanan: $skippedLockedCount',
-          if (lastError != null) 'Son hata: $lastError',
-        ].join(' • ');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg.isEmpty ? 'İşlem tamamlandı.' : msg)),
-        );
+        if (mounted) {
+          setState(() {
+            _isBulkUpdating = false;
+            _bulkCurrentLabel = null;
+          });
+        }
+        if (context.mounted) {
+          final msg = [
+            if (createdCount > 0) 'Açılan: $createdCount',
+            if (touchedCount > 0) 'Güncellenen: $touchedCount',
+            if (pulledCount > 0) 'Satış çekilen: $pulledCount',
+            if (skippedLockedCount > 0) 'Kilitli atlanan: $skippedLockedCount',
+            if (lastError != null) 'Son hata: $lastError',
+          ].join(' • ');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg.isEmpty ? 'İşlem tamamlandı.' : msg)),
+          );
+        }
       }
     }
 
@@ -345,14 +410,21 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                 FilledButton.icon(
                   onPressed: _isBulkUpdating ? null : bulkUpdateOrCreate,
                   icon: _isBulkUpdating
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.sync),
                   label: Text(
                     _isBulkUpdating
-                        ? 'Güncelleniyor...'
+                        ? 'Satışlar çekiliyor...'
                         : (_branchId == null
-                            ? 'Seçili Tarihleri Güncelle (Tümü)'
-                            : 'Seçili Tarihleri Güncelle (${branches.firstWhere((b) => b.id == _branchId, orElse: () => const Branch(id: "x", name: "Şube")).name})'),
+                              ? 'Satışları Çek ve İcmal Oluştur'
+                              : 'Satışları Çek (${branches.firstWhere(
+                                  (b) => b.id == _branchId,
+                                  orElse: () => const Branch(id: "x", name: "Şube"),
+                                ).name})'),
                   ),
                 ),
               if (AppConfig.hasApi) const SizedBox(width: 8),
@@ -363,7 +435,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
               ),
               IconButton(
                 tooltip: 'PDF dışa aktar',
-                onPressed: filtered.isEmpty ? null : () => _exportPdf(filtered, branches),
+                onPressed: filtered.isEmpty
+                    ? null
+                    : () => _exportPdf(filtered, branches),
                 icon: const Icon(Icons.picture_as_pdf),
               ),
               const SizedBox(width: 8),
@@ -381,7 +455,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                     Text('Güncelleniyor: $_bulkDone / $_bulkTotal'),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: _bulkTotal == 0 ? null : (_bulkDone / _bulkTotal).clamp(0, 1),
+                      value: _bulkTotal == 0
+                          ? null
+                          : (_bulkDone / _bulkTotal).clamp(0, 1),
                       minHeight: 6,
                     ),
                   ],
@@ -454,164 +530,72 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                       for (final r in filtered)
                         () {
                           String branchName(String id) => branches
-                              .firstWhere((b) => b.id == id, orElse: () => const Branch(id: 'x', name: '?'))
+                              .firstWhere(
+                                (b) => b.id == id,
+                                orElse: () => const Branch(id: 'x', name: '?'),
+                              )
                               .name;
 
-                          String statusLabel(ReconciliationStatus s) => switch (s) {
+                          String statusLabel(ReconciliationStatus s) =>
+                              switch (s) {
                                 ReconciliationStatus.draft => 'Taslak',
-                                ReconciliationStatus.submitted => 'Onay Bekliyor',
+                                ReconciliationStatus.submitted =>
+                                  'Onay Bekliyor',
                                 ReconciliationStatus.approved => 'Onaylandı',
                                 ReconciliationStatus.rejected => 'Reddedildi',
                               };
 
                           final missing = missingRequiredAttachmentKinds(r);
-                          final hasDiff = r.status != ReconciliationStatus.draft && r.difference.abs() > 0.01;
+                          final hasDiff =
+                              r.status != ReconciliationStatus.draft &&
+                              r.difference.abs() > 0.01;
                           final scheme = Theme.of(context).colorScheme;
                           final rowColor = hasDiff
-                              ? (missing.isEmpty ? scheme.tertiaryContainer : scheme.errorContainer)
+                              ? (missing.isEmpty
+                                    ? scheme.tertiaryContainer
+                                    : scheme.errorContainer)
                               : _dayColor(r.date);
-
-                          final today = DateTime.now();
-                          final dayOnly = DateTime(today.year, today.month, today.day);
-                          final yesterday = dayOnly.subtract(const Duration(days: 1));
-                          final isLiveCheckDay = _isSameDay(r.date, dayOnly) || _isSameDay(r.date, yesterday);
-                          final branch = branches.firstWhere(
-                            (b) => b.id == r.branchId,
-                            orElse: () => const Branch(id: 'x', name: '?'),
-                          );
-                          final liveTotalAsync = (AppConfig.hasApi && isLiveCheckDay)
-                              ? ref.watch(
-                                  posLiveDailyTotalProvider(
-                                    (
-                                      branchId: r.branchId,
-                                      date: r.date,
-                                      businessDayStartHour: branch.businessDayStartHour,
-                                      registerCode: null,
-                                    ),
-                                  ),
-                                )
-                              : null;
 
                           final ocrCard = r.ocrCardTotal;
                           final manualCard = r.manualCardTotal;
-                          final hasOcr = r.hasEndOfDayReport && ocrCard.abs() > 0.0001;
+                          final hasOcr =
+                              r.hasEndOfDayReport && ocrCard.abs() > 0.0001;
                           final hasManual = manualCard.abs() > 0.0001;
                           final showManualWarning = hasManual && !hasOcr;
 
                           return DataRow(
                             color: WidgetStatePropertyAll(rowColor),
-                            onSelectChanged: (_) => context.go('/reconciliations/${r.id}'),
+                            onSelectChanged: (_) =>
+                                context.go('/reconciliations/${r.id}'),
                             cells: [
-                              DataCell(Text(DateFormat('yyyy-MM-dd', 'tr_TR').format(r.date))),
+                              DataCell(
+                                Text(
+                                  DateFormat(
+                                    'yyyy-MM-dd',
+                                    'tr_TR',
+                                  ).format(r.date),
+                                ),
+                              ),
                               DataCell(Text(branchName(r.branchId))),
+                              DataCell(Text(statusLabel(r.status))),
                               DataCell(
-                                liveTotalAsync == null
-                                    ? Text(statusLabel(r.status))
-                                    : liveTotalAsync.when(
-                                        data: (liveTotal) {
-                                          final hasMissingLive = liveTotal > r.expectedSalesTotal + 0.01;
-                                          if (!hasMissingLive) {
-                                            return Text(statusLabel(r.status));
-                                          }
-                                          return Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(statusLabel(r.status)),
-                                              const SizedBox(width: 8),
-                                              Chip(
-                                                backgroundColor: scheme.errorContainer,
-                                                label: Text(
-                                                  'Eksik satış',
-                                                  style: TextStyle(color: scheme.onErrorContainer),
-                                                ),
-                                                visualDensity: VisualDensity.compact,
-                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                padding: EdgeInsets.zero,
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                        loading: () => Text(statusLabel(r.status)),
-                                        error: (e, st) {
-                                          return Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(statusLabel(r.status)),
-                                              const SizedBox(width: 8),
-                                              Tooltip(
-                                                message: 'POS canlı satış okunamadı: $e',
-                                                child: Chip(
-                                                  backgroundColor: scheme.secondaryContainer,
-                                                  label: Text(
-                                                    'Canlı yok',
-                                                    style: TextStyle(color: scheme.onSecondaryContainer),
-                                                  ),
-                                                  visualDensity: VisualDensity.compact,
-                                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                  padding: EdgeInsets.zero,
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      ),
+                                Text(money.format(r.expectedSalesTotal)),
                               ),
                               DataCell(
-                                liveTotalAsync == null
-                                    ? Text(money.format(r.expectedSalesTotal))
-                                    : liveTotalAsync.when(
-                                        data: (liveTotal) {
-                                          final hasMissingLive = liveTotal > r.expectedSalesTotal + 0.01;
-                                          if (!hasMissingLive) {
-                                            return Text(money.format(r.expectedSalesTotal));
-                                          }
-                                          return Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(money.format(r.expectedSalesTotal)),
-                                              const SizedBox(width: 6),
-                                              Tooltip(
-                                                message:
-                                                    'Eksik satış olabilir. POS canlı: ${money.format(liveTotal)} • Form: ${money.format(r.expectedSalesTotal)}',
-                                                child: Icon(
-                                                  Icons.error_outline,
-                                                  size: 18,
-                                                  color: Theme.of(context).colorScheme.error,
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                        loading: () => Text(money.format(r.expectedSalesTotal)),
-                                        error: (e, st) {
-                                          return Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(money.format(r.expectedSalesTotal)),
-                                              const SizedBox(width: 6),
-                                              Tooltip(
-                                                message: 'POS canlı satış okunamadı: $e',
-                                                child: Icon(
-                                                  Icons.cloud_off_outlined,
-                                                  size: 18,
-                                                  color: Theme.of(context).colorScheme.error,
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      ),
+                                Text(hasOcr ? money.format(ocrCard) : ''),
                               ),
-                              DataCell(Text(hasOcr ? money.format(ocrCard) : '')),
                               DataCell(
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(hasManual ? money.format(manualCard) : ''),
+                                    Text(
+                                      hasManual ? money.format(manualCard) : '',
+                                    ),
                                     if (showManualWarning) ...[
                                       const SizedBox(width: 6),
                                       Tooltip(
-                                        message: 'Kredi kartı tutarı manuel girilmiş (OCR raporu yok).',
+                                        message:
+                                            'Kredi kartı tutarı manuel girilmiş (OCR raporu yok).',
                                         child: Icon(
                                           Icons.warning_amber_outlined,
                                           size: 18,
@@ -626,7 +610,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                               DataCell(Text(money.format(r.difference))),
                               DataCell(
                                 Text(
-                                  missing.isEmpty ? r.attachmentsCount.toString() : 'Eksik: ${missing.length}',
+                                  missing.isEmpty
+                                      ? r.attachmentsCount.toString()
+                                      : 'Eksik: ${missing.length}',
                                 ),
                               ),
                             ],
@@ -644,8 +630,16 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
           final created = await _showCreateDialog(context, ref);
           if (created != null && context.mounted) {
             setState(() {
-              _fromDate = DateTime(created.date.year, created.date.month, created.date.day);
-              _toDate = DateTime(created.date.year, created.date.month, created.date.day);
+              _fromDate = DateTime(
+                created.date.year,
+                created.date.month,
+                created.date.day,
+              );
+              _toDate = DateTime(
+                created.date.year,
+                created.date.month,
+                created.date.day,
+              );
               _branchId = null;
             });
             context.go('/reconciliations/${created.id}');
@@ -661,7 +655,10 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
     BuildContext context,
     WidgetRef ref,
   ) async {
-    final branches = ref.read(branchesProvider).where((e) => e.isActive).toList();
+    final branches = ref
+        .read(branchesProvider)
+        .where((e) => e.isActive)
+        .toList();
     final auth = ref.read(authControllerProvider).asData?.value;
     if (auth == null) return null;
     if (branches.isEmpty) {
@@ -682,9 +679,14 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
       );
     }
 
-    var selectedBranchId = auth.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
+    var selectedBranchId =
+        auth.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
     var selectedDate = DateTime.now();
-    selectedDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    selectedDate = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
     var isSaving = false;
 
     return showDialog<CashReconciliation>(
@@ -713,7 +715,10 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                     children: [
                       Expanded(
                         child: Text(
-                          DateFormat('yyyy-MM-dd', 'tr_TR').format(selectedDate),
+                          DateFormat(
+                            'yyyy-MM-dd',
+                            'tr_TR',
+                          ).format(selectedDate),
                         ),
                       ),
                       TextButton(
@@ -728,7 +733,11 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                                 );
                                 if (picked != null) {
                                   setState(() {
-                                    selectedDate = DateTime(picked.year, picked.month, picked.day);
+                                    selectedDate = DateTime(
+                                      picked.year,
+                                      picked.month,
+                                      picked.day,
+                                    );
                                   });
                                 }
                               },
@@ -740,7 +749,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
               ),
               actions: [
                 TextButton(
-                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: const Text('İptal'),
                 ),
                 FilledButton(
@@ -761,11 +772,13 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                             }
                           } catch (e) {
                             if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Hata: $e')),
-                            );
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text('Hata: $e')));
                           } finally {
-                            if (context.mounted) setState(() => isSaving = false);
+                            if (context.mounted) {
+                              setState(() => isSaving = false);
+                            }
                           }
                         },
                   child: Text(isSaving ? 'Oluşturuluyor...' : 'Oluştur'),
@@ -822,7 +835,10 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
     ].join(';');
 
     String branchName(String id) => branches
-        .firstWhere((b) => b.id == id, orElse: () => const Branch(id: 'x', name: '?'))
+        .firstWhere(
+          (b) => b.id == id,
+          orElse: () => const Branch(id: 'x', name: '?'),
+        )
         .name;
 
     String statusLabel(ReconciliationStatus s) => switch (s) {
@@ -837,16 +853,18 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
     final lines = <String>[header];
     for (final r in items) {
       final missing = missingRequiredAttachmentKinds(r);
-      lines.add([
-        DateFormat('yyyy-MM-dd', 'tr_TR').format(r.date),
-        branchName(r.branchId),
-        statusLabel(r.status),
-        num(r.expectedSalesTotal),
-        num(r.paymentTotal),
-        num(r.difference),
-        missing.map(attachmentKindLabel).join(', '),
-        r.attachmentsCount.toString(),
-      ].join(';'));
+      lines.add(
+        [
+          DateFormat('yyyy-MM-dd', 'tr_TR').format(r.date),
+          branchName(r.branchId),
+          statusLabel(r.status),
+          num(r.expectedSalesTotal),
+          num(r.paymentTotal),
+          num(r.difference),
+          missing.map(attachmentKindLabel).join(', '),
+          r.attachmentsCount.toString(),
+        ].join(';'),
+      );
     }
 
     final csv = lines.join('\n');
@@ -872,7 +890,10 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
     List<Branch> branches,
   ) async {
     String branchName(String id) => branches
-        .firstWhere((b) => b.id == id, orElse: () => const Branch(id: 'x', name: '?'))
+        .firstWhere(
+          (b) => b.id == id,
+          orElse: () => const Branch(id: 'x', name: '?'),
+        )
         .name;
 
     String statusLabel(ReconciliationStatus s) => switch (s) {
@@ -913,9 +934,9 @@ class _ReconciliationListPageState extends ConsumerState<ReconciliationListPage>
                     money.format(r.expectedSalesTotal),
                     money.format(r.paymentTotal),
                     money.format(r.difference),
-                    missingRequiredAttachmentKinds(r)
-                        .map(attachmentKindLabel)
-                        .join(', '),
+                    missingRequiredAttachmentKinds(
+                      r,
+                    ).map(attachmentKindLabel).join(', '),
                   ],
               ],
               cellAlignment: pw.Alignment.centerLeft,
@@ -965,7 +986,8 @@ class _FiltersCard extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    bool sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
 
     DateTime weekStart(DateTime d) {
       final wd = d.weekday;
@@ -983,7 +1005,10 @@ class _FiltersCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('Filtreler', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Filtreler',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const Spacer(),
                 TextButton(
                   onPressed: () {
@@ -1010,7 +1035,11 @@ class _FiltersCard extends StatelessWidget {
               children: [
                 ChoiceChip(
                   label: const Text('Bugün'),
-                  selected: fromDate != null && toDate != null && sameDay(fromDate!, today) && sameDay(toDate!, today),
+                  selected:
+                      fromDate != null &&
+                      toDate != null &&
+                      sameDay(fromDate!, today) &&
+                      sameDay(toDate!, today),
                   onSelected: (_) => onChanged(
                     _FilterState(
                       fromDate: today,
@@ -1024,9 +1053,13 @@ class _FiltersCard extends StatelessWidget {
                 ),
                 ChoiceChip(
                   label: const Text('Dün'),
-                  selected: fromDate != null &&
+                  selected:
+                      fromDate != null &&
                       toDate != null &&
-                      sameDay(fromDate!, today.subtract(const Duration(days: 1))) &&
+                      sameDay(
+                        fromDate!,
+                        today.subtract(const Duration(days: 1)),
+                      ) &&
                       sameDay(toDate!, today.subtract(const Duration(days: 1))),
                   onSelected: (_) {
                     final d = today.subtract(const Duration(days: 1));
@@ -1044,7 +1077,11 @@ class _FiltersCard extends StatelessWidget {
                 ),
                 ChoiceChip(
                   label: const Text('Bu hafta'),
-                  selected: fromDate != null && toDate != null && sameDay(fromDate!, weekStart(today)) && sameDay(toDate!, today),
+                  selected:
+                      fromDate != null &&
+                      toDate != null &&
+                      sameDay(fromDate!, weekStart(today)) &&
+                      sameDay(toDate!, today),
                   onSelected: (_) => onChanged(
                     _FilterState(
                       fromDate: weekStart(today),
@@ -1058,7 +1095,11 @@ class _FiltersCard extends StatelessWidget {
                 ),
                 ChoiceChip(
                   label: const Text('Bu ay'),
-                  selected: fromDate != null && toDate != null && sameDay(fromDate!, monthStart(today)) && sameDay(toDate!, today),
+                  selected:
+                      fromDate != null &&
+                      toDate != null &&
+                      sameDay(fromDate!, monthStart(today)) &&
+                      sameDay(toDate!, today),
                   onSelected: (_) => onChanged(
                     _FilterState(
                       fromDate: monthStart(today),
@@ -1075,7 +1116,8 @@ class _FiltersCard extends StatelessWidget {
                   selected: () {
                     if (fromDate == null || toDate == null) return false;
                     final lastMonth = DateTime(today.year, today.month - 1, 1);
-                    return sameDay(fromDate!, monthStart(lastMonth)) && sameDay(toDate!, monthEnd(lastMonth));
+                    return sameDay(fromDate!, monthStart(lastMonth)) &&
+                        sameDay(toDate!, monthEnd(lastMonth));
                   }(),
                   onSelected: (_) {
                     final lastMonth = DateTime(today.year, today.month - 1, 1);
@@ -1131,7 +1173,10 @@ class _FiltersCard extends StatelessWidget {
                   child: DropdownButtonFormField<String?>(
                     initialValue: branchId,
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('Tüm Şubeler')),
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Tüm Şubeler'),
+                      ),
                       for (final b in branches)
                         DropdownMenuItem(value: b.id, child: Text(b.name)),
                     ],
@@ -1153,7 +1198,10 @@ class _FiltersCard extends StatelessWidget {
                   child: DropdownButtonFormField<ReconciliationStatus?>(
                     initialValue: status,
                     items: const [
-                      DropdownMenuItem(value: null, child: Text('Tüm Durumlar')),
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text('Tüm Durumlar'),
+                      ),
                       DropdownMenuItem(
                         value: ReconciliationStatus.draft,
                         child: Text('Taslak'),
@@ -1304,13 +1352,6 @@ class _DailyOverviewCard extends ConsumerWidget {
 
     final scheme = Theme.of(context).colorScheme;
     final dateText = DateFormat('yyyy-MM-dd', 'tr_TR').format(date);
-    final today = DateTime.now();
-    final dayOnly = DateTime(today.year, today.month, today.day);
-    final yesterday = dayOnly.subtract(const Duration(days: 1));
-    final isLiveCheckDay =
-        (date.year == dayOnly.year && date.month == dayOnly.month && date.day == dayOnly.day) ||
-            (date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day);
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1326,68 +1367,25 @@ class _DailyOverviewCard extends ConsumerWidget {
               Builder(
                 builder: (context) {
                   final rec = findForBranch(b.id);
-                  final liveTotalAsync = (AppConfig.hasApi && isLiveCheckDay)
-                      ? ref.watch(
-                          posLiveDailyTotalProvider(
-                            (
-                              branchId: b.id,
-                              date: date,
-                              businessDayStartHour: b.businessDayStartHour,
-                              registerCode: null,
-                            ),
-                          ),
-                        )
-                      : null;
                   if (rec == null) {
-                    if (liveTotalAsync != null) {
-                      return liveTotalAsync.when(
-                        data: (liveTotal) {
-                          final hasSales = liveTotal > 0.01;
-                          return Card(
-                            color: hasSales ? scheme.errorContainer : scheme.surfaceContainerHighest,
-                            child: ListTile(
-                              title: Text(b.name),
-                              subtitle: hasSales
-                                  ? Text('İcmal yok • POS canlı: ${money.format(liveTotal)}')
-                                  : const Text('Kayıt yok'),
-                              trailing: hasSales ? const Icon(Icons.error_outline) : null,
-                            ),
-                          );
-                        },
-                        loading: () => Card(
-                          color: scheme.surfaceContainerHighest,
-                          child: ListTile(
-                            title: Text(b.name),
-                            subtitle: const Text('Kayıt yok'),
-                          ),
-                        ),
-                        error: (e, st) => Card(
-                          color: scheme.errorContainer,
-                          child: ListTile(
-                            title: Text(b.name),
-                            subtitle: const Text('Kayıt yok'),
-                            trailing: const Icon(Icons.error_outline),
-                          ),
-                        ),
-                      );
-                    }
                     return Card(
                       color: scheme.errorContainer,
                       child: ListTile(
                         title: Text(b.name),
-                        subtitle: const Text('Kayıt yok'),
+                        subtitle: const Text('İcmal yok'),
                         trailing: const Icon(Icons.error_outline),
                       ),
                     );
                   }
 
-                  final hasDiff = rec.status != ReconciliationStatus.draft &&
+                  final hasDiff =
+                      rec.status != ReconciliationStatus.draft &&
                       rec.difference.abs() > 0.01;
                   final missing = missingRequiredAttachmentKinds(rec);
                   final color = hasDiff
                       ? (missing.isEmpty
-                          ? scheme.tertiaryContainer
-                          : scheme.errorContainer)
+                            ? scheme.tertiaryContainer
+                            : scheme.errorContainer)
                       : scheme.surfaceContainerHighest;
 
                   return Card(
@@ -1396,20 +1394,7 @@ class _DailyOverviewCard extends ConsumerWidget {
                       onTap: () => context.go('/reconciliations/${rec.id}'),
                       title: Text(b.name),
                       subtitle: Text(
-                        liveTotalAsync == null
-                            ? 'Satış: ${money.format(rec.expectedSalesTotal)} • Toplam: ${money.format(rec.paymentTotal)} • Fark: ${money.format(rec.difference)}'
-                            : liveTotalAsync.when(
-                                data: (liveTotal) {
-                                  final hasMissing = liveTotal > rec.expectedSalesTotal + 0.01;
-                                  return hasMissing
-                                      ? 'Satış: ${money.format(rec.expectedSalesTotal)} • Toplam: ${money.format(rec.paymentTotal)} • Fark: ${money.format(rec.difference)} • Eksik satış olabilir (POS canlı: ${money.format(liveTotal)})'
-                                      : 'Satış: ${money.format(rec.expectedSalesTotal)} • Toplam: ${money.format(rec.paymentTotal)} • Fark: ${money.format(rec.difference)}';
-                                },
-                                loading: () =>
-                                    'Satış: ${money.format(rec.expectedSalesTotal)} • Toplam: ${money.format(rec.paymentTotal)} • Fark: ${money.format(rec.difference)}',
-                                error: (e, st) =>
-                                    'Satış: ${money.format(rec.expectedSalesTotal)} • Toplam: ${money.format(rec.paymentTotal)} • Fark: ${money.format(rec.difference)}',
-                              ),
+                        'Satış: ${money.format(rec.expectedSalesTotal)} • Toplam: ${money.format(rec.paymentTotal)} • Fark: ${money.format(rec.difference)}',
                       ),
                       trailing: Wrap(
                         spacing: 8,

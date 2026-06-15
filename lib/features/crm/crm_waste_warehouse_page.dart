@@ -10,7 +10,8 @@ class CrmWasteWarehousePage extends ConsumerStatefulWidget {
   const CrmWasteWarehousePage({super.key});
 
   @override
-  ConsumerState<CrmWasteWarehousePage> createState() => _CrmWasteWarehousePageState();
+  ConsumerState<CrmWasteWarehousePage> createState() =>
+      _CrmWasteWarehousePageState();
 }
 
 class _CrmWasteWarehousePageState extends ConsumerState<CrmWasteWarehousePage> {
@@ -29,13 +30,19 @@ class _CrmWasteWarehousePageState extends ConsumerState<CrmWasteWarehousePage> {
     final role = session?.role ?? UserRole.branchUser;
     final canEdit = role == UserRole.manager || role == UserRole.accounting;
 
-    final branches = ref.watch(branchesProvider).where((e) => e.isActive).toList();
+    final branches = ref
+        .watch(branchesProvider)
+        .where((e) => e.isActive)
+        .toList();
     final warehouses = ref.watch(inventoryWarehousesProvider);
     final selectedWarehouseId = ref.watch(wasteWarehouseSelectionProvider);
 
-    _selectedBranchId ??= session?.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
+    _selectedBranchId ??=
+        session?.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
     ref.read(inventoryWarehousesProvider.notifier).setBranch(_selectedBranchId);
-    ref.read(wasteWarehouseSelectionProvider.notifier).setBranch(_selectedBranchId);
+    ref
+        .read(wasteWarehouseSelectionProvider.notifier)
+        .setBranch(_selectedBranchId);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -67,8 +74,12 @@ class _CrmWasteWarehousePageState extends ConsumerState<CrmWasteWarehousePage> {
                       ? null
                       : (v) {
                           setState(() => _selectedBranchId = v);
-                          ref.read(inventoryWarehousesProvider.notifier).setBranch(v);
-                          ref.read(wasteWarehouseSelectionProvider.notifier).setBranch(v);
+                          ref
+                              .read(inventoryWarehousesProvider.notifier)
+                              .setBranch(v);
+                          ref
+                              .read(wasteWarehouseSelectionProvider.notifier)
+                              .setBranch(v);
                         },
                   decoration: const InputDecoration(labelText: 'Şube'),
                 ),
@@ -79,7 +90,9 @@ class _CrmWasteWarehousePageState extends ConsumerState<CrmWasteWarehousePage> {
                       child: TextField(
                         controller: _warehouseNameController,
                         enabled: canEdit && _selectedBranchId != null,
-                        decoration: const InputDecoration(labelText: 'Depo Adı'),
+                        decoration: const InputDecoration(
+                          labelText: 'Depo Adı',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -89,19 +102,24 @@ class _CrmWasteWarehousePageState extends ConsumerState<CrmWasteWarehousePage> {
                         onPressed: !canEdit || _selectedBranchId == null
                             ? null
                             : () async {
-                          final name = _warehouseNameController.text.trim();
-                          if (name.isEmpty) return;
-                          await ref.read(inventoryWarehousesProvider.notifier).add(
-                                branchId: _selectedBranchId!,
-                                name: name,
-                              );
-                          _warehouseNameController.clear();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Kaydedildi.')),
-                            );
-                          }
-                        },
+                                final name = _warehouseNameController.text
+                                    .trim();
+                                if (name.isEmpty) return;
+                                await ref
+                                    .read(inventoryWarehousesProvider.notifier)
+                                    .add(
+                                      branchId: _selectedBranchId!,
+                                      name: name,
+                                    );
+                                _warehouseNameController.clear();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Kaydedildi.'),
+                                    ),
+                                  );
+                                }
+                              },
                         child: const Text('Ekle'),
                       ),
                     ),
@@ -122,19 +140,30 @@ class _CrmWasteWarehousePageState extends ConsumerState<CrmWasteWarehousePage> {
                         for (var i = 0; i < warehouses.length; i++)
                           DataRow(
                             color: WidgetStatePropertyAll(
-                              i.isEven ? const Color(0xFFFFFFFF) : const Color(0xFFF4F4F4),
+                              i.isEven
+                                  ? const Color(0xFFFFFFFF)
+                                  : const Color(0xFFF4F4F4),
                             ),
                             cells: [
                               DataCell(Text(warehouses[i].name)),
                               DataCell(
+                                // ignore: deprecated_member_use
                                 Radio<String>(
                                   value: warehouses[i].id,
+                                  // ignore: deprecated_member_use
                                   groupValue: selectedWarehouseId,
-                                  onChanged: !canEdit || _selectedBranchId == null
+                                  // ignore: deprecated_member_use
+                                  onChanged:
+                                      !canEdit || _selectedBranchId == null
                                       ? null
                                       : (v) async {
                                           if (v == null) return;
-                                          await ref.read(wasteWarehouseSelectionProvider.notifier).setSelected(
+                                          await ref
+                                              .read(
+                                                wasteWarehouseSelectionProvider
+                                                    .notifier,
+                                              )
+                                              .setSelected(
                                                 branchId: _selectedBranchId!,
                                                 warehouseId: v,
                                               );

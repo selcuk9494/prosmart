@@ -9,8 +9,9 @@ import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_models.dart';
 import 'models.dart';
 
-final branchesProvider =
-    NotifierProvider<BranchesStore, List<Branch>>(BranchesStore.new);
+final branchesProvider = NotifierProvider<BranchesStore, List<Branch>>(
+  BranchesStore.new,
+);
 
 final dbCheckProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   if (!AppConfig.hasApi) {
@@ -28,11 +29,12 @@ final dbCheckProvider = FutureProvider<Map<String, dynamic>>((ref) async {
 
 final branchDataSourcesProvider =
     NotifierProvider<BranchDataSourcesStore, List<BranchDataSource>>(
-  BranchDataSourcesStore.new,
-);
+      BranchDataSourcesStore.new,
+    );
 
 Branch _branchFromJson(Map<String, dynamic> m) {
-  final startHourRaw = m['businessDayStartHour'] ?? m['business_day_start_hour'] ?? 0;
+  final startHourRaw =
+      m['businessDayStartHour'] ?? m['business_day_start_hour'] ?? 0;
   final startHour = (startHourRaw is num)
       ? startHourRaw.toInt()
       : int.tryParse(startHourRaw.toString()) ?? 0;
@@ -76,18 +78,21 @@ CashRegister _cashRegisterFromJson(Map<String, dynamic> m) {
 
 final branchCashRegistersProvider =
     FutureProvider.family<List<CashRegister>, String>((ref, branchId) async {
-  if (!AppConfig.hasApi) return const [];
-  final dio = ref.read(dioProvider);
-  final res = await dio.get<List<dynamic>>('/branches/$branchId/cash-registers');
-  final data = res.data ?? const [];
-  return [
-    for (final raw in data)
-      if (raw is Map<String, dynamic>) _cashRegisterFromJson(raw),
-  ];
-});
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<List<dynamic>>(
+        '/branches/$branchId/cash-registers',
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>) _cashRegisterFromJson(raw),
+      ];
+    });
 
-final branchCashRegistersActionsProvider =
-    Provider<BranchCashRegistersActions>(BranchCashRegistersActions.new);
+final branchCashRegistersActionsProvider = Provider<BranchCashRegistersActions>(
+  BranchCashRegistersActions.new,
+);
 
 class BranchCashRegistersActions {
   BranchCashRegistersActions(this.ref);
@@ -162,6 +167,7 @@ class BranchDataSourcesStore extends Notifier<List<BranchDataSource>> {
       'username': username,
       'ssl': ssl,
       'isActive': isActive,
+      // ignore: use_null_aware_elements
       if (password != null) 'password': password,
     };
     await dio.put<Map<String, dynamic>>(
@@ -181,7 +187,8 @@ class BranchDataSourcesStore extends Notifier<List<BranchDataSource>> {
       final data = res.data ?? const {};
       final ok = (data['ok'] as bool?) ?? false;
       if (ok) return true;
-      final message = (data['message'] ?? data['error'] ?? 'Bağlantı başarısız').toString();
+      final message = (data['message'] ?? data['error'] ?? 'Bağlantı başarısız')
+          .toString();
       throw Exception(message);
     } on DioException catch (e) {
       final data = e.response?.data;
@@ -274,7 +281,8 @@ class BranchesStore extends Notifier<List<Branch>> {
             b.copyWith(
               name: name ?? b.name,
               code: code ?? b.code,
-              businessDayStartHour: businessDayStartHour ?? b.businessDayStartHour,
+              businessDayStartHour:
+                  businessDayStartHour ?? b.businessDayStartHour,
               isActive: isActive ?? b.isActive,
             )
           else
@@ -311,7 +319,9 @@ class BranchesStore extends Notifier<List<Branch>> {
 }
 
 final paymentTypesProvider =
-    NotifierProvider<PaymentTypesStore, List<PaymentType>>(PaymentTypesStore.new);
+    NotifierProvider<PaymentTypesStore, List<PaymentType>>(
+      PaymentTypesStore.new,
+    );
 
 PaymentType _paymentTypeFromJson(Map<String, dynamic> m) {
   return PaymentType(
@@ -356,10 +366,7 @@ class PaymentTypesStore extends Notifier<List<PaymentType>> {
     ];
   }
 
-  Future<void> addPaymentType({
-    required String name,
-    String? code,
-  }) async {
+  Future<void> addPaymentType({required String name, String? code}) async {
     if (!AppConfig.hasApi) {
       final id = 'pay-${DateTime.now().millisecondsSinceEpoch}';
       state = [...state, PaymentType(id: id, code: code, name: name)];
@@ -417,7 +424,9 @@ class PaymentTypesStore extends Notifier<List<PaymentType>> {
       return;
     }
 
-    await ref.read(dioProvider).patch<Map<String, dynamic>>(
+    await ref
+        .read(dioProvider)
+        .patch<Map<String, dynamic>>(
           '/payment-types/$id',
           data: {
             if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
@@ -430,7 +439,9 @@ class PaymentTypesStore extends Notifier<List<PaymentType>> {
 }
 
 final expenseTypesProvider =
-    NotifierProvider<ExpenseTypesStore, List<ExpenseType>>(ExpenseTypesStore.new);
+    NotifierProvider<ExpenseTypesStore, List<ExpenseType>>(
+      ExpenseTypesStore.new,
+    );
 
 ExpenseType _expenseTypeFromJson(Map<String, dynamic> m) {
   return ExpenseType(
@@ -482,7 +493,10 @@ class ExpenseTypesStore extends Notifier<List<ExpenseType>> {
     }
 
     final dio = ref.read(dioProvider);
-    await dio.post<Map<String, dynamic>>('/expense-types', data: {'name': name});
+    await dio.post<Map<String, dynamic>>(
+      '/expense-types',
+      data: {'name': name},
+    );
     await refresh();
   }
 
@@ -507,7 +521,9 @@ class ExpenseTypesStore extends Notifier<List<ExpenseType>> {
 }
 
 final incomeCentersProvider =
-    NotifierProvider<IncomeCentersStore, List<IncomeCenter>>(IncomeCentersStore.new);
+    NotifierProvider<IncomeCentersStore, List<IncomeCenter>>(
+      IncomeCentersStore.new,
+    );
 
 class IncomeCentersStore extends Notifier<List<IncomeCenter>> {
   @override
@@ -527,7 +543,12 @@ class IncomeCentersStore extends Notifier<List<IncomeCenter>> {
 
     return const [
       IncomeCenter(id: 'inc-1', code: 'GM-01', name: 'Gelir Merkezi 1'),
-      IncomeCenter(id: 'inc-2', code: 'GM-02', name: 'Gelir Merkezi 2', isActive: false),
+      IncomeCenter(
+        id: 'inc-2',
+        code: 'GM-02',
+        name: 'Gelir Merkezi 2',
+        isActive: false,
+      ),
     ];
   }
 
@@ -548,15 +569,16 @@ class IncomeCentersStore extends Notifier<List<IncomeCenter>> {
     ];
   }
 
-  Future<void> addIncomeCenter({
-    required String name,
-    String? code,
-  }) async {
+  Future<void> addIncomeCenter({required String name, String? code}) async {
     if (!AppConfig.hasApi) {
       final id = 'inc-${DateTime.now().millisecondsSinceEpoch}';
       state = [
         ...state,
-        IncomeCenter(id: id, code: code?.trim().isEmpty ?? true ? null : code!.trim(), name: name),
+        IncomeCenter(
+          id: id,
+          code: code?.trim().isEmpty ?? true ? null : code!.trim(),
+          name: name,
+        ),
       ];
       return;
     }
@@ -591,7 +613,9 @@ class IncomeCentersStore extends Notifier<List<IncomeCenter>> {
 }
 
 final cashRegistersProvider =
-    NotifierProvider<CashRegistersStore, List<CashRegister>>(CashRegistersStore.new);
+    NotifierProvider<CashRegistersStore, List<CashRegister>>(
+      CashRegistersStore.new,
+    );
 
 class CashRegistersStore extends Notifier<List<CashRegister>> {
   @override
@@ -610,8 +634,18 @@ class CashRegistersStore extends Notifier<List<CashRegister>> {
     }
 
     return const [
-      CashRegister(id: 'cash-1', code: 'KASA-01', name: 'Kasa 1', isActive: true),
-      CashRegister(id: 'cash-2', code: 'KASA-02', name: 'Kasa 2', isActive: true),
+      CashRegister(
+        id: 'cash-1',
+        code: 'KASA-01',
+        name: 'Kasa 1',
+        isActive: true,
+      ),
+      CashRegister(
+        id: 'cash-2',
+        code: 'KASA-02',
+        name: 'Kasa 2',
+        isActive: true,
+      ),
     ];
   }
 
@@ -632,10 +666,7 @@ class CashRegistersStore extends Notifier<List<CashRegister>> {
     ];
   }
 
-  Future<void> addCashRegister({
-    required String name,
-    String? code,
-  }) async {
+  Future<void> addCashRegister({required String name, String? code}) async {
     if (!AppConfig.hasApi) {
       final id = 'cash-${DateTime.now().millisecondsSinceEpoch}';
       state = [
@@ -676,8 +707,8 @@ class CashRegistersStore extends Notifier<List<CashRegister>> {
 
 final wasteWarehouseSelectionProvider =
     NotifierProvider<WasteWarehouseSelectionStore, String?>(
-  WasteWarehouseSelectionStore.new,
-);
+      WasteWarehouseSelectionStore.new,
+    );
 
 class WasteWarehouseSelectionStore extends Notifier<String?> {
   String? _branchId;
@@ -709,6 +740,7 @@ class WasteWarehouseSelectionStore extends Notifier<String?> {
   }
 
   void setBranch(String? branchId) {
+    if (_branchId == branchId) return;
     _branchId = branchId;
     if (AppConfig.hasApi) {
       refresh();
@@ -757,8 +789,8 @@ class WasteWarehouseSelectionStore extends Notifier<String?> {
 
 final minMaxDefinitionsProvider =
     NotifierProvider<MinMaxDefinitionsStore, List<MinMaxDefinition>>(
-  MinMaxDefinitionsStore.new,
-);
+      MinMaxDefinitionsStore.new,
+    );
 
 class MinMaxDefinitionsStore extends Notifier<List<MinMaxDefinition>> {
   String? _branchId;
@@ -787,6 +819,7 @@ class MinMaxDefinitionsStore extends Notifier<List<MinMaxDefinition>> {
   }
 
   void setBranch(String? branchId) {
+    if (_branchId == branchId) return;
     _branchId = branchId;
     if (AppConfig.hasApi) {
       refresh();
@@ -872,8 +905,8 @@ class MinMaxDefinitionsStore extends Notifier<List<MinMaxDefinition>> {
 
 final unproducedProductsProvider =
     NotifierProvider<UnproducedProductsStore, List<UnproducedProduct>>(
-  UnproducedProductsStore.new,
-);
+      UnproducedProductsStore.new,
+    );
 
 class UnproducedProductsStore extends Notifier<List<UnproducedProduct>> {
   @override
@@ -914,14 +947,15 @@ class UnproducedProductsStore extends Notifier<List<UnproducedProduct>> {
     ];
   }
 
-  Future<void> add({
-    required String productName,
-    bool? isBlocked,
-  }) async {
+  Future<void> add({required String productName, bool? isBlocked}) async {
     if (!AppConfig.hasApi) {
       final id = 'up-${DateTime.now().millisecondsSinceEpoch}';
       state = [
-        UnproducedProduct(id: id, productName: productName, isBlocked: isBlocked ?? true),
+        UnproducedProduct(
+          id: id,
+          productName: productName,
+          isBlocked: isBlocked ?? true,
+        ),
         ...state,
       ];
       return;
@@ -929,10 +963,7 @@ class UnproducedProductsStore extends Notifier<List<UnproducedProduct>> {
     final dio = ref.read(dioProvider);
     await dio.post<Map<String, dynamic>>(
       '/unproduced-products',
-      data: {
-        'productName': productName,
-        'isBlocked': ?isBlocked,
-      },
+      data: {'productName': productName, 'isBlocked': ?isBlocked},
     );
     await refresh();
   }
@@ -954,8 +985,9 @@ class UnproducedProductsStore extends Notifier<List<UnproducedProduct>> {
   }
 }
 
-final unitSetsProvider =
-    NotifierProvider<UnitSetsStore, List<UnitSet>>(UnitSetsStore.new);
+final unitSetsProvider = NotifierProvider<UnitSetsStore, List<UnitSet>>(
+  UnitSetsStore.new,
+);
 
 class UnitSetsStore extends Notifier<List<UnitSet>> {
   @override
@@ -997,13 +1029,13 @@ class UnitSetsStore extends Notifier<List<UnitSet>> {
     ];
   }
 
-  Future<void> add({
-    required String code,
-    required String name,
-  }) async {
+  Future<void> add({required String code, required String name}) async {
     if (!AppConfig.hasApi) {
       final id = 'us-${DateTime.now().millisecondsSinceEpoch}';
-      state = [UnitSet(id: id, code: code, name: name, isActive: true), ...state];
+      state = [
+        UnitSet(id: id, code: code, name: name, isActive: true),
+        ...state,
+      ];
       return;
     }
     final dio = ref.read(dioProvider);
@@ -1034,7 +1066,9 @@ class UnitSetsStore extends Notifier<List<UnitSet>> {
 }
 
 final accountPeriodsProvider =
-    NotifierProvider<AccountPeriodsStore, List<AccountPeriod>>(AccountPeriodsStore.new);
+    NotifierProvider<AccountPeriodsStore, List<AccountPeriod>>(
+      AccountPeriodsStore.new,
+    );
 
 class AccountPeriodsStore extends Notifier<List<AccountPeriod>> {
   @override
@@ -1096,7 +1130,13 @@ class AccountPeriodsStore extends Notifier<List<AccountPeriod>> {
     if (!AppConfig.hasApi) {
       final id = 'ap-${DateTime.now().millisecondsSinceEpoch}';
       state = [
-        AccountPeriod(id: id, name: name, startDate: startDate, endDate: endDate, isActive: true),
+        AccountPeriod(
+          id: id,
+          name: name,
+          startDate: startDate,
+          endDate: endDate,
+          isActive: true,
+        ),
         ...state.map((e) => e.copyWith(isActive: false)),
       ];
       return;
@@ -1117,7 +1157,10 @@ class AccountPeriodsStore extends Notifier<List<AccountPeriod>> {
     if (!AppConfig.hasApi) {
       state = [
         for (final e in state)
-          if (e.id == id) e.copyWith(isActive: isActive) else e.copyWith(isActive: isActive ? false : e.isActive),
+          if (e.id == id)
+            e.copyWith(isActive: isActive)
+          else
+            e.copyWith(isActive: isActive ? false : e.isActive),
       ];
       return;
     }
@@ -1131,7 +1174,9 @@ class AccountPeriodsStore extends Notifier<List<AccountPeriod>> {
 }
 
 final workstationsProvider =
-    NotifierProvider<WorkstationsStore, List<Workstation>>(WorkstationsStore.new);
+    NotifierProvider<WorkstationsStore, List<Workstation>>(
+      WorkstationsStore.new,
+    );
 
 class WorkstationsStore extends Notifier<List<Workstation>> {
   @override
@@ -1172,13 +1217,13 @@ class WorkstationsStore extends Notifier<List<Workstation>> {
     ];
   }
 
-  Future<void> add({
-    required String code,
-    required String name,
-  }) async {
+  Future<void> add({required String code, required String name}) async {
     if (!AppConfig.hasApi) {
       final id = 'ws-${DateTime.now().millisecondsSinceEpoch}';
-      state = [Workstation(id: id, code: code, name: name, isActive: true), ...state];
+      state = [
+        Workstation(id: id, code: code, name: name, isActive: true),
+        ...state,
+      ];
       return;
     }
     final dio = ref.read(dioProvider);
@@ -1210,8 +1255,8 @@ class WorkstationsStore extends Notifier<List<Workstation>> {
 
 final inventoryInvoicesProvider =
     NotifierProvider<InventoryInvoicesStore, List<InventoryInvoice>>(
-  InventoryInvoicesStore.new,
-);
+      InventoryInvoicesStore.new,
+    );
 
 class InventoryInvoicesStore extends Notifier<List<InventoryInvoice>> {
   String? _branchId;
@@ -1240,11 +1285,7 @@ class InventoryInvoicesStore extends Notifier<List<InventoryInvoice>> {
     return const [];
   }
 
-  void setFilters({
-    required String? branchId,
-    DateTime? from,
-    DateTime? to,
-  }) {
+  void setFilters({required String? branchId, DateTime? from, DateTime? to}) {
     _branchId = branchId;
     _from = from;
     _to = to;
@@ -1284,10 +1325,18 @@ class InventoryInvoicesStore extends Notifier<List<InventoryInvoice>> {
             total: _numToDouble(raw['total']),
             paymentTypeId: raw['paymentTypeId']?.toString(),
             incomeCenterId: raw['incomeCenterId']?.toString(),
-            discountRate: raw['discountRate'] == null ? null : _numToDouble(raw['discountRate']),
-            discountAmount: raw['discountAmount'] == null ? null : _numToDouble(raw['discountAmount']),
-            mealVoucherDiscount: raw['mealVoucherDiscount'] == null ? null : _numToDouble(raw['mealVoucherDiscount']),
-            paymentDate: raw['paymentDate'] == null ? null : _parseDate(raw['paymentDate']),
+            discountRate: raw['discountRate'] == null
+                ? null
+                : _numToDouble(raw['discountRate']),
+            discountAmount: raw['discountAmount'] == null
+                ? null
+                : _numToDouble(raw['discountAmount']),
+            mealVoucherDiscount: raw['mealVoucherDiscount'] == null
+                ? null
+                : _numToDouble(raw['mealVoucherDiscount']),
+            paymentDate: raw['paymentDate'] == null
+                ? null
+                : _parseDate(raw['paymentDate']),
           ),
     ];
   }
@@ -1307,7 +1356,8 @@ class InventoryInvoicesStore extends Notifier<List<InventoryInvoice>> {
         'branchId': branchId,
         'invoiceNo': invoiceNo,
         'invoiceDate': invoiceDate.toIso8601String().substring(0, 10),
-        if (vendorName?.trim().isNotEmpty ?? false) 'vendorName': vendorName!.trim(),
+        if (vendorName?.trim().isNotEmpty ?? false)
+          'vendorName': vendorName!.trim(),
         if (notes?.trim().isNotEmpty ?? false) 'notes': notes!.trim(),
       },
     );
@@ -1317,109 +1367,148 @@ class InventoryInvoicesStore extends Notifier<List<InventoryInvoice>> {
 }
 
 final inventoryInvoiceDetailProvider =
-    FutureProvider.family<({InventoryInvoice header, List<InventoryInvoiceLine> lines}), String>(
-  (ref, id) async {
-    if (!AppConfig.hasApi) throw StateError('API modu gerekli');
-    final dio = ref.read(dioProvider);
-    final res = await dio.get<Map<String, dynamic>>('/inv/invoices/$id');
-    final data = res.data ?? const {};
-    final headerRaw = data['header'];
-    final linesRaw = data['lines'];
-    if (headerRaw is! Map<String, dynamic>) throw StateError('Boş yanıt');
+    FutureProvider.family<
+      ({
+        InventoryInvoice header,
+        List<InventoryInvoiceLine> lines,
+        InventoryInvoiceStockPost? stockPost,
+      }),
+      String
+    >((ref, id) async {
+      if (!AppConfig.hasApi) throw StateError('API modu gerekli');
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<Map<String, dynamic>>('/inv/invoices/$id');
+      final data = res.data ?? const {};
+      final headerRaw = data['header'];
+      final linesRaw = data['lines'];
+      final stockPostRaw = data['stockPost'];
+      if (headerRaw is! Map<String, dynamic>) throw StateError('Boş yanıt');
 
-    final header = InventoryInvoice(
-      id: headerRaw['id'].toString(),
-      branchId: headerRaw['branchId'].toString(),
-      invoiceNo: (headerRaw['invoiceNo'] ?? '').toString(),
-      invoiceDate: _parseDate(headerRaw['invoiceDate']),
-      vendorName: headerRaw['vendorName']?.toString(),
-      notes: headerRaw['notes']?.toString(),
-      total: null,
-      paymentTypeId: headerRaw['paymentTypeId']?.toString(),
-      incomeCenterId: headerRaw['incomeCenterId']?.toString(),
-      discountRate: headerRaw['discountRate'] == null ? null : _numToDouble(headerRaw['discountRate']),
-      discountAmount: headerRaw['discountAmount'] == null ? null : _numToDouble(headerRaw['discountAmount']),
-      mealVoucherDiscount: headerRaw['mealVoucherDiscount'] == null ? null : _numToDouble(headerRaw['mealVoucherDiscount']),
-      paymentDate: headerRaw['paymentDate'] == null ? null : _parseDate(headerRaw['paymentDate']),
-    );
+      final header = InventoryInvoice(
+        id: headerRaw['id'].toString(),
+        branchId: headerRaw['branchId'].toString(),
+        invoiceNo: (headerRaw['invoiceNo'] ?? '').toString(),
+        invoiceDate: _parseDate(headerRaw['invoiceDate']),
+        vendorName: headerRaw['vendorName']?.toString(),
+        notes: headerRaw['notes']?.toString(),
+        total: null,
+        paymentTypeId: headerRaw['paymentTypeId']?.toString(),
+        incomeCenterId: headerRaw['incomeCenterId']?.toString(),
+        discountRate: headerRaw['discountRate'] == null
+            ? null
+            : _numToDouble(headerRaw['discountRate']),
+        discountAmount: headerRaw['discountAmount'] == null
+            ? null
+            : _numToDouble(headerRaw['discountAmount']),
+        mealVoucherDiscount: headerRaw['mealVoucherDiscount'] == null
+            ? null
+            : _numToDouble(headerRaw['mealVoucherDiscount']),
+        paymentDate: headerRaw['paymentDate'] == null
+            ? null
+            : _parseDate(headerRaw['paymentDate']),
+      );
 
-    final lines = <InventoryInvoiceLine>[
-      if (linesRaw is List)
-        for (final raw in linesRaw)
-          if (raw is Map<String, dynamic>)
-            InventoryInvoiceLine(
-              id: raw['id'].toString(),
-              invoiceId: raw['invoiceId'].toString(),
-              productId: raw['productId']?.toString(),
-              productCode: raw['productCode']?.toString(),
-              productName: raw['productName']?.toString(),
-              description: (raw['description'] ?? '').toString(),
-              unit: raw['unit']?.toString(),
-              quantity: _numToDouble(raw['quantity']),
-              unitPrice: _numToDouble(raw['unitPrice']),
-              lineTotal: _numToDouble(raw['lineTotal']),
-            ),
-    ];
+      final lines = <InventoryInvoiceLine>[
+        if (linesRaw is List)
+          for (final raw in linesRaw)
+            if (raw is Map<String, dynamic>)
+              InventoryInvoiceLine(
+                id: raw['id'].toString(),
+                invoiceId: raw['invoiceId'].toString(),
+                productId: raw['productId']?.toString(),
+                productCode: raw['productCode']?.toString(),
+                productName: raw['productName']?.toString(),
+                description: (raw['description'] ?? '').toString(),
+                unit: raw['unit']?.toString(),
+                quantity: _numToDouble(raw['quantity']),
+                unitPrice: _numToDouble(raw['unitPrice']),
+                lineTotal: _numToDouble(raw['lineTotal']),
+              ),
+      ];
 
-    return (header: header, lines: lines);
-  },
-);
+      final stockPost = stockPostRaw is Map<String, dynamic>
+          ? InventoryInvoiceStockPost(
+              transactionId: stockPostRaw['transactionId'].toString(),
+              warehouseId: stockPostRaw['warehouseId'].toString(),
+              warehouseName: stockPostRaw['warehouseName']?.toString(),
+              linesCount:
+                  (stockPostRaw['linesCount'] as num?)?.toInt() ??
+                  int.tryParse(stockPostRaw['linesCount']?.toString() ?? '') ??
+                  0,
+              createdAt: stockPostRaw['createdAt'] == null
+                  ? null
+                  : DateTime.tryParse(stockPostRaw['createdAt'].toString()),
+            )
+          : null;
 
-final inventoryInvoiceActionsProvider = Provider<InventoryInvoiceActions>((ref) {
+      return (header: header, lines: lines, stockPost: stockPost);
+    });
+
+final inventoryInvoiceActionsProvider = Provider<InventoryInvoiceActions>((
+  ref,
+) {
   return InventoryInvoiceActions(ref);
 });
 
 final inventoryOpenDeliveryNotesProvider =
-    FutureProvider.family<List<InventoryOpenDocument>, String>((ref, branchId) async {
-  if (!AppConfig.hasApi) return const [];
-  final dio = ref.read(dioProvider);
-  final res = await dio.get<List<dynamic>>(
-    '/inv/open-delivery-notes',
-    queryParameters: {'branchId': branchId},
-  );
-  final data = res.data ?? const [];
-  return [
-    for (final raw in data)
-      if (raw is Map<String, dynamic>)
-        InventoryOpenDocument(
-          id: raw['id'].toString(),
-          branchId: raw['branchId'].toString(),
-          docNo: (raw['docNo'] ?? '').toString(),
-          docDate: _parseDate(raw['docDate']),
-          vendorName: raw['vendorName']?.toString(),
-          total: _numToDouble(raw['total']),
-          linesCount: (raw['linesCount'] as num?)?.toInt() ??
-              int.tryParse(raw['linesCount']?.toString() ?? ''),
-          kind: raw['kind']?.toString(),
-        ),
-  ];
-});
+    FutureProvider.family<List<InventoryOpenDocument>, String>((
+      ref,
+      branchId,
+    ) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<List<dynamic>>(
+        '/inv/open-delivery-notes',
+        queryParameters: {'branchId': branchId},
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            InventoryOpenDocument(
+              id: raw['id'].toString(),
+              branchId: raw['branchId'].toString(),
+              docNo: (raw['docNo'] ?? '').toString(),
+              docDate: _parseDate(raw['docDate']),
+              vendorName: raw['vendorName']?.toString(),
+              total: _numToDouble(raw['total']),
+              linesCount:
+                  (raw['linesCount'] as num?)?.toInt() ??
+                  int.tryParse(raw['linesCount']?.toString() ?? ''),
+              kind: raw['kind']?.toString(),
+            ),
+      ];
+    });
 
 final inventoryOpenPurchaseOrdersProvider =
-    FutureProvider.family<List<InventoryOpenDocument>, String>((ref, branchId) async {
-  if (!AppConfig.hasApi) return const [];
-  final dio = ref.read(dioProvider);
-  final res = await dio.get<List<dynamic>>(
-    '/inv/open-purchase-orders',
-    queryParameters: {'branchId': branchId},
-  );
-  final data = res.data ?? const [];
-  return [
-    for (final raw in data)
-      if (raw is Map<String, dynamic>)
-        InventoryOpenDocument(
-          id: raw['id'].toString(),
-          branchId: raw['branchId'].toString(),
-          docNo: (raw['docNo'] ?? '').toString(),
-          docDate: _parseDate(raw['docDate']),
-          vendorName: raw['vendorName']?.toString(),
-          total: _numToDouble(raw['total']),
-          linesCount: (raw['linesCount'] as num?)?.toInt() ??
-              int.tryParse(raw['linesCount']?.toString() ?? ''),
-          kind: raw['kind']?.toString(),
-        ),
-  ];
-});
+    FutureProvider.family<List<InventoryOpenDocument>, String>((
+      ref,
+      branchId,
+    ) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<List<dynamic>>(
+        '/inv/open-purchase-orders',
+        queryParameters: {'branchId': branchId},
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            InventoryOpenDocument(
+              id: raw['id'].toString(),
+              branchId: raw['branchId'].toString(),
+              docNo: (raw['docNo'] ?? '').toString(),
+              docDate: _parseDate(raw['docDate']),
+              vendorName: raw['vendorName']?.toString(),
+              total: _numToDouble(raw['total']),
+              linesCount:
+                  (raw['linesCount'] as num?)?.toInt() ??
+                  int.tryParse(raw['linesCount']?.toString() ?? ''),
+              kind: raw['kind']?.toString(),
+            ),
+      ];
+    });
 
 class InventoryInvoiceActions {
   InventoryInvoiceActions(this._ref);
@@ -1469,7 +1558,8 @@ class InventoryInvoiceActions {
       '/inv/invoices/$invoiceId',
       data: {
         'invoiceNo': ?invoiceNo,
-        if (invoiceDate != null) 'invoiceDate': invoiceDate.toIso8601String().substring(0, 10),
+        if (invoiceDate != null)
+          'invoiceDate': invoiceDate.toIso8601String().substring(0, 10),
         'vendorName': ?vendorName,
         'notes': ?notes,
         'paymentTypeId': ?paymentTypeId,
@@ -1477,7 +1567,8 @@ class InventoryInvoiceActions {
         'discountRate': ?discountRate,
         'discountAmount': ?discountAmount,
         'mealVoucherDiscount': ?mealVoucherDiscount,
-        if (paymentDate != null) 'paymentDate': paymentDate.toIso8601String().substring(0, 10),
+        if (paymentDate != null)
+          'paymentDate': paymentDate.toIso8601String().substring(0, 10),
       },
     );
     _ref.invalidate(inventoryInvoiceDetailProvider(invoiceId));
@@ -1494,9 +1585,24 @@ class InventoryInvoiceActions {
     _ref.invalidate(inventoryInvoiceDetailProvider(invoiceId));
     _ref.invalidate(inventoryInvoicesProvider);
   }
+
+  Future<void> postToStock(String invoiceId) async {
+    if (!AppConfig.hasApi) return;
+    final dio = _ref.read(dioProvider);
+    await dio.post<Map<String, dynamic>>(
+      '/inv/invoices/$invoiceId/post-to-stock',
+    );
+    _ref.invalidate(inventoryInvoiceDetailProvider(invoiceId));
+    _ref.invalidate(inventoryInvoicesProvider);
+    _ref.invalidate(inventoryTransactionsProvider);
+    _ref.invalidate(inventoryOnHandProvider);
+    _ref.invalidate(inventoryRecipesProvider);
+  }
 }
 
-final usersProvider = NotifierProvider<UsersStore, List<AppUser>>(UsersStore.new);
+final usersProvider = NotifierProvider<UsersStore, List<AppUser>>(
+  UsersStore.new,
+);
 
 class UsersStore extends Notifier<List<AppUser>> {
   @override
@@ -1633,8 +1739,10 @@ class UsersStore extends Notifier<List<AppUser>> {
   }
 }
 
-final reconciliationsProvider = NotifierProvider<ReconciliationStore,
-    List<CashReconciliation>>(ReconciliationStore.new);
+final reconciliationsProvider =
+    NotifierProvider<ReconciliationStore, List<CashReconciliation>>(
+      ReconciliationStore.new,
+    );
 
 ReconciliationStatus _statusFromString(String? raw) {
   final v = raw?.trim().toLowerCase();
@@ -1728,8 +1836,7 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
     final data = res.data ?? const [];
     state = _sorted([
       for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          _fromListJson(raw),
+        if (raw is Map<String, dynamic>) _fromListJson(raw),
     ]);
   }
 
@@ -1806,7 +1913,8 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
             id: raw['id'].toString(),
             kind: _attachmentKindFromString(raw['kind']?.toString()),
             fileName: (raw['fileName'] ?? '').toString(),
-            mimeType: (raw['mimeType'] ?? 'application/octet-stream').toString(),
+            mimeType: (raw['mimeType'] ?? 'application/octet-stream')
+                .toString(),
             sizeBytes: (raw['sizeBytes'] as num?)?.toInt() ?? 0,
           ),
     ];
@@ -1854,7 +1962,10 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
     final day = DateTime(date.year, date.month, date.day);
     final created = await dio.post<Map<String, dynamic>>(
       '/cash-reconciliations',
-      data: {'branchId': branchId, 'businessDate': day.toIso8601String().substring(0, 10)},
+      data: {
+        'branchId': branchId,
+        'businessDate': day.toIso8601String().substring(0, 10),
+      },
     );
     final id = created.data?['id']?.toString();
     if (id == null || id.isEmpty) {
@@ -1866,7 +1977,9 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
       return item;
     } catch (_) {
       await refresh();
-      final existing = state.where((e) => e.branchId == branchId && _sameDay(e.date, day)).firstOrNull;
+      final existing = state
+          .where((e) => e.branchId == branchId && _sameDay(e.date, day))
+          .firstOrNull;
       if (existing != null) return existing;
       rethrow;
     }
@@ -1902,7 +2015,9 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
     }
 
     final dio = ref.read(dioProvider);
-    final res = await dio.get<Map<String, dynamic>>('/cash-reconciliations/$id');
+    final res = await dio.get<Map<String, dynamic>>(
+      '/cash-reconciliations/$id',
+    );
     final data = res.data;
     if (data == null) throw StateError('Boş yanıt');
     return _fromDetailJson(data);
@@ -2018,221 +2133,294 @@ class ReconciliationStore extends Notifier<List<CashReconciliation>> {
     final fresh = await fetchById(reconciliationId);
     upsertLocal(fresh);
   }
+
+  Future<void> uploadAttachmentFile({
+    required String reconciliationId,
+    required AttachmentKind kind,
+    required String fileName,
+    required String mimeType,
+    required List<int> bytes,
+  }) async {
+    if (!AppConfig.hasApi) return;
+    final dio = ref.read(dioProvider);
+    final kindString = switch (kind) {
+      AttachmentKind.countSlip => 'countSlip',
+      AttachmentKind.signedStatement => 'signedStatement',
+      AttachmentKind.other => 'other',
+    };
+    final form = FormData.fromMap({
+      'kind': kindString,
+      'fileName': fileName,
+      'mimeType': mimeType,
+      'sizeBytes': bytes.length,
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: fileName,
+        contentType: DioMediaType.parse(mimeType),
+      ),
+    });
+    await dio.post<Map<String, dynamic>>(
+      '/cash-reconciliations/$reconciliationId/attachments',
+      data: form,
+    );
+    final fresh = await fetchById(reconciliationId);
+    upsertLocal(fresh);
+  }
 }
 
 final posRegisterDailySalesProvider =
-    FutureProvider.family<List<PosRegisterDailySale>, ({String branchId, DateTime date})>(
-  (ref, args) async {
-    if (!AppConfig.hasApi) return const [];
-    final dio = ref.read(dioProvider);
-    final date = DateTime(args.date.year, args.date.month, args.date.day);
-    final res = await dio.get<List<dynamic>>(
-      '/sales/daily/registers',
-      queryParameters: {
-        'branchId': args.branchId,
-        'date': date.toIso8601String().substring(0, 10),
-      },
-    );
-    final data = res.data ?? const [];
-    return [
-      for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          PosRegisterDailySale(
-            registerCode: (raw['registerCode'] ?? '').toString(),
-            grossTotal: _numToDouble(raw['grossTotal']),
-          ),
-    ];
-  },
-);
+    FutureProvider.family<
+      List<PosRegisterDailySale>,
+      ({String branchId, DateTime date})
+    >((ref, args) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final date = DateTime(args.date.year, args.date.month, args.date.day);
+      final res = await dio.get<List<dynamic>>(
+        '/sales/daily/registers',
+        queryParameters: {
+          'branchId': args.branchId,
+          'date': date.toIso8601String().substring(0, 10),
+        },
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            PosRegisterDailySale(
+              registerCode: (raw['registerCode'] ?? '').toString(),
+              grossTotal: _numToDouble(raw['grossTotal']),
+            ),
+      ];
+    });
 
 final posRegisterDailyPaymentsProvider =
-    FutureProvider.family<List<PosRegisterDailyPayment>, ({String branchId, DateTime date})>(
-  (ref, args) async {
-    if (!AppConfig.hasApi) return const [];
-    final dio = ref.read(dioProvider);
-    final date = DateTime(args.date.year, args.date.month, args.date.day);
-    final res = await dio.get<List<dynamic>>(
-      '/sales/daily/payments',
-      queryParameters: {
-        'branchId': args.branchId,
-        'date': date.toIso8601String().substring(0, 10),
-      },
-    );
-    final data = res.data ?? const [];
-    return [
-      for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          PosRegisterDailyPayment(
-            registerCode: (raw['registerCode'] ?? '').toString(),
-            paymentCode: (raw['paymentCode'] ?? '').toString(),
-            amount: _numToDouble(raw['amount']),
-          ),
-    ];
-  },
-);
+    FutureProvider.family<
+      List<PosRegisterDailyPayment>,
+      ({String branchId, DateTime date})
+    >((ref, args) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final date = DateTime(args.date.year, args.date.month, args.date.day);
+      final res = await dio.get<List<dynamic>>(
+        '/sales/daily/payments',
+        queryParameters: {
+          'branchId': args.branchId,
+          'date': date.toIso8601String().substring(0, 10),
+        },
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            PosRegisterDailyPayment(
+              registerCode: (raw['registerCode'] ?? '').toString(),
+              paymentCode: (raw['paymentCode'] ?? '').toString(),
+              amount: _numToDouble(raw['amount']),
+            ),
+      ];
+    });
 
 final posDailyProductSalesProvider =
-    FutureProvider.family<List<PosDailyProductSale>, ({String branchId, DateTime date, String? registerCode})>(
-  (ref, args) async {
-    if (!AppConfig.hasApi) return const [];
-    final dio = ref.read(dioProvider);
-    final date = DateTime(args.date.year, args.date.month, args.date.day);
-    final queryParameters = <String, dynamic>{
-      'branchId': args.branchId,
-      'date': date.toIso8601String().substring(0, 10),
-    };
-    final registerCode = args.registerCode?.trim();
-    if (registerCode != null && registerCode.isNotEmpty) {
-      queryParameters['registerCode'] = registerCode;
-    }
-    final res = await dio.get<List<dynamic>>(
-      '/sales/daily/products',
-      queryParameters: queryParameters,
-    );
-    final data = res.data ?? const [];
-    return [
-      for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          PosDailyProductSale(
-            productCode: (raw['productCode'] ?? '').toString(),
-            productName: (raw['productName'] ?? '').toString(),
-            quantity: _numToDouble(raw['quantity']),
-            grossTotal: _numToDouble(raw['grossTotal']),
-          ),
-    ];
-  },
-);
+    FutureProvider.family<
+      List<PosDailyProductSale>,
+      ({String branchId, DateTime date, String? registerCode})
+    >((ref, args) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final date = DateTime(args.date.year, args.date.month, args.date.day);
+      final queryParameters = <String, dynamic>{
+        'branchId': args.branchId,
+        'date': date.toIso8601String().substring(0, 10),
+      };
+      final registerCode = args.registerCode?.trim();
+      if (registerCode != null && registerCode.isNotEmpty) {
+        queryParameters['registerCode'] = registerCode;
+      }
+      final res = await dio.get<List<dynamic>>(
+        '/sales/daily/products',
+        queryParameters: queryParameters,
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            PosDailyProductSale(
+              productCode: (raw['productCode'] ?? '').toString(),
+              productName: (raw['productName'] ?? '').toString(),
+              quantity: _numToDouble(raw['quantity']),
+              grossTotal: _numToDouble(raw['grossTotal']),
+            ),
+      ];
+    });
 
 final posDailyAdjustmentsProvider =
-    FutureProvider.family<List<PosDailyAdjustment>, ({String branchId, DateTime date, String? registerCode})>(
-  (ref, args) async {
-    if (!AppConfig.hasApi) return const [];
-    final dio = ref.read(dioProvider);
-    final date = DateTime(args.date.year, args.date.month, args.date.day);
-    final queryParameters = <String, dynamic>{
-      'branchId': args.branchId,
-      'date': date.toIso8601String().substring(0, 10),
-    };
-    final registerCode = args.registerCode?.trim();
-    if (registerCode != null && registerCode.isNotEmpty) {
-      queryParameters['registerCode'] = registerCode;
-    }
-    final res = await dio.get<List<dynamic>>(
-      '/sales/daily/adjustments',
-      queryParameters: queryParameters,
-    );
-    final data = res.data ?? const [];
-    return [
-      for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          PosDailyAdjustment(
-            kind: (raw['kind'] ?? '').toString(),
-            amount: _numToDouble(raw['amount']),
-            count: (raw['count'] is num)
-                ? (raw['count'] as num).toInt()
-                : int.tryParse((raw['count'] ?? 0).toString()) ?? 0,
-          ),
-    ];
-  },
-);
+    FutureProvider.family<
+      List<PosDailyAdjustment>,
+      ({String branchId, DateTime date, String? registerCode})
+    >((ref, args) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final date = DateTime(args.date.year, args.date.month, args.date.day);
+      final queryParameters = <String, dynamic>{
+        'branchId': args.branchId,
+        'date': date.toIso8601String().substring(0, 10),
+      };
+      final registerCode = args.registerCode?.trim();
+      if (registerCode != null && registerCode.isNotEmpty) {
+        queryParameters['registerCode'] = registerCode;
+      }
+      final res = await dio.get<List<dynamic>>(
+        '/sales/daily/adjustments',
+        queryParameters: queryParameters,
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            PosDailyAdjustment(
+              kind: (raw['kind'] ?? '').toString(),
+              amount: _numToDouble(raw['amount']),
+              count: (raw['count'] is num)
+                  ? (raw['count'] as num).toInt()
+                  : int.tryParse((raw['count'] ?? 0).toString()) ?? 0,
+            ),
+      ];
+    });
 
-final posCancelledItemsProvider = FutureProvider.family<
-    List<PosCancelledItem>,
-    ({String branchId, DateTime date, int businessDayStartHour, String? registerCode})>(
-  (ref, args) async {
-    if (!AppConfig.hasApi) return const [];
-    final dio = ref.read(dioProvider);
-    final date = DateTime(args.date.year, args.date.month, args.date.day);
-    final queryParameters = <String, dynamic>{
-      'branchId': args.branchId,
-      'date': date.toIso8601String().substring(0, 10),
-      'businessDayStartHour': args.businessDayStartHour,
-    };
-    final registerCode = args.registerCode?.trim();
-    if (registerCode != null && registerCode.isNotEmpty) {
-      queryParameters['registerCode'] = registerCode;
-    }
-    final res = await dio.get<List<dynamic>>(
-      '/pos/cancellations',
-      queryParameters: queryParameters,
-    );
-    final data = res.data ?? const [];
-    return [
-      for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          PosCancelledItem(
-            registerCode: (raw['registerCode'] ?? '').toString(),
-            type: (raw['type'] ?? '').toString(),
-            productName: (raw['productName'] ?? '').toString(),
-            quantity: _numToDouble(raw['quantity']),
-            total: _numToDouble(raw['total']),
-            reason: raw['reason']?.toString(),
-            cancelledByName: raw['cancelledByName']?.toString(),
-            occurredAt: DateTime.tryParse((raw['occurredAt'] ?? '').toString()) ?? date,
-            orderId: raw['orderId']?.toString(),
-          ),
-    ];
-  },
-);
+final posCancelledItemsProvider =
+    FutureProvider.family<
+      List<PosCancelledItem>,
+      ({
+        String branchId,
+        DateTime date,
+        int businessDayStartHour,
+        String? registerCode,
+      })
+    >((ref, args) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final date = DateTime(args.date.year, args.date.month, args.date.day);
+      final queryParameters = <String, dynamic>{
+        'branchId': args.branchId,
+        'date': date.toIso8601String().substring(0, 10),
+        'businessDayStartHour': args.businessDayStartHour,
+      };
+      final registerCode = args.registerCode?.trim();
+      if (registerCode != null && registerCode.isNotEmpty) {
+        queryParameters['registerCode'] = registerCode;
+      }
+      late final Response<List<dynamic>> res;
+      try {
+        res = await dio.get<List<dynamic>>(
+          '/pos/cancellations',
+          queryParameters: queryParameters,
+        );
+      } on DioException catch (e) {
+        final data = e.response?.data;
+        final code = data is Map
+            ? (data['code'] ?? data['error'])?.toString()
+            : null;
+        if (code == 'INTEGRATION_SECRET_REQUIRED') return const [];
+        rethrow;
+      }
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            PosCancelledItem(
+              registerCode: (raw['registerCode'] ?? '').toString(),
+              type: (raw['type'] ?? '').toString(),
+              productName: (raw['productName'] ?? '').toString(),
+              quantity: _numToDouble(raw['quantity']),
+              total: _numToDouble(raw['total']),
+              reason: raw['reason']?.toString(),
+              cancelledByName: raw['cancelledByName']?.toString(),
+              occurredAt:
+                  DateTime.tryParse((raw['occurredAt'] ?? '').toString()) ??
+                  date,
+              orderId: raw['orderId']?.toString(),
+            ),
+      ];
+    });
 
 final posDailySalesGroupsProvider =
-    FutureProvider.family<List<PosDailySalesGroup>, ({String branchId, DateTime date, String? registerCode})>(
-  (ref, args) async {
-    if (!AppConfig.hasApi) return const [];
-    final dio = ref.read(dioProvider);
-    final date = DateTime(args.date.year, args.date.month, args.date.day);
-    final queryParameters = <String, dynamic>{
-      'branchId': args.branchId,
-      'date': date.toIso8601String().substring(0, 10),
-    };
-    final registerCode = args.registerCode?.trim();
-    if (registerCode != null && registerCode.isNotEmpty) {
-      queryParameters['registerCode'] = registerCode;
-    }
-    final res = await dio.get<List<dynamic>>(
-      '/sales/daily/groups',
-      queryParameters: queryParameters,
-    );
-    final data = res.data ?? const [];
-    return [
-      for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          PosDailySalesGroup(
-            groupCode: (raw['groupCode'] ?? '').toString(),
-            orderCount: (raw['orderCount'] is num)
-                ? (raw['orderCount'] as num).toInt()
-                : int.tryParse((raw['orderCount'] ?? 0).toString()) ?? 0,
-            grossTotal: _numToDouble(raw['grossTotal']),
-          ),
-    ];
-  },
-);
+    FutureProvider.family<
+      List<PosDailySalesGroup>,
+      ({String branchId, DateTime date, String? registerCode})
+    >((ref, args) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final date = DateTime(args.date.year, args.date.month, args.date.day);
+      final queryParameters = <String, dynamic>{
+        'branchId': args.branchId,
+        'date': date.toIso8601String().substring(0, 10),
+      };
+      final registerCode = args.registerCode?.trim();
+      if (registerCode != null && registerCode.isNotEmpty) {
+        queryParameters['registerCode'] = registerCode;
+      }
+      final res = await dio.get<List<dynamic>>(
+        '/sales/daily/groups',
+        queryParameters: queryParameters,
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            PosDailySalesGroup(
+              groupCode: (raw['groupCode'] ?? '').toString(),
+              orderCount: (raw['orderCount'] is num)
+                  ? (raw['orderCount'] as num).toInt()
+                  : int.tryParse((raw['orderCount'] ?? 0).toString()) ?? 0,
+              grossTotal: _numToDouble(raw['grossTotal']),
+            ),
+      ];
+    });
 
 final posLiveDailyTotalProvider =
-    FutureProvider.family<double, ({String branchId, DateTime date, int businessDayStartHour, String? registerCode})>(
-  (ref, args) async {
-    if (!AppConfig.hasApi) return 0;
-    final dio = ref.read(dioProvider);
-    final date = DateTime(args.date.year, args.date.month, args.date.day);
-    final queryParameters = <String, dynamic>{
-      'branchId': args.branchId,
-      'businessDate': date.toIso8601String().substring(0, 10),
-      'businessDayStartHour': args.businessDayStartHour,
-    };
-    final registerCode = args.registerCode?.trim();
-    if (registerCode != null && registerCode.isNotEmpty) {
-      queryParameters['registerCode'] = registerCode;
-    }
-    final res = await dio.get<Map<String, dynamic>>(
-      '/pos/live/daily-total',
-      queryParameters: queryParameters,
-    );
-    final data = res.data ?? const {};
-    return _numToDouble(data['grossTotal']);
-  },
-);
+    FutureProvider.family<
+      double,
+      ({
+        String branchId,
+        DateTime date,
+        int businessDayStartHour,
+        String? registerCode,
+      })
+    >((ref, args) async {
+      if (!AppConfig.hasApi) return 0;
+      final dio = ref.read(dioProvider);
+      final date = DateTime(args.date.year, args.date.month, args.date.day);
+      final queryParameters = <String, dynamic>{
+        'branchId': args.branchId,
+        'businessDate': date.toIso8601String().substring(0, 10),
+        'businessDayStartHour': args.businessDayStartHour,
+      };
+      final registerCode = args.registerCode?.trim();
+      if (registerCode != null && registerCode.isNotEmpty) {
+        queryParameters['registerCode'] = registerCode;
+      }
+      late final Response<Map<String, dynamic>> res;
+      try {
+        res = await dio.get<Map<String, dynamic>>(
+          '/pos/live/daily-total',
+          queryParameters: queryParameters,
+        );
+      } on DioException catch (e) {
+        final data = e.response?.data;
+        final code = data is Map
+            ? (data['code'] ?? data['error'])?.toString()
+            : null;
+        if (code == 'INTEGRATION_SECRET_REQUIRED') return 0;
+        rethrow;
+      }
+      final data = res.data ?? const {};
+      return _numToDouble(data['grossTotal']);
+    });
 
-final posPullStatusesProvider = FutureProvider<List<PosPullStatus>>((ref) async {
+final posPullStatusesProvider = FutureProvider<List<PosPullStatus>>((
+  ref,
+) async {
   if (!AppConfig.hasApi) return const [];
   final dio = ref.read(dioProvider);
   List<dynamic> data = const [];
@@ -2254,44 +2442,52 @@ final posPullStatusesProvider = FutureProvider<List<PosPullStatus>>((ref) async 
           branchId: (raw['branchId'] ?? '').toString(),
           branchName: (raw['branchName'] ?? '').toString(),
           isActive: (raw['isActive'] as bool?) ?? true,
-          lastPulledAt: DateTime.tryParse((raw['lastPulledAt'] ?? '').toString()),
-          lastBusinessDate: DateTime.tryParse((raw['lastBusinessDate'] ?? '').toString()),
+          lastPulledAt: DateTime.tryParse(
+            (raw['lastPulledAt'] ?? '').toString(),
+          ),
+          lastBusinessDate: DateTime.tryParse(
+            (raw['lastBusinessDate'] ?? '').toString(),
+          ),
         ),
   ];
 });
 
 final endOfDayReportsProvider =
-    FutureProvider.family<List<EndOfDayReport>, String>((ref, reconciliationId) async {
-  if (!AppConfig.hasApi) return const [];
-  final dio = ref.read(dioProvider);
-  final res = await dio.get<List<dynamic>>(
-    '/cash-reconciliations/$reconciliationId/end-of-day-reports',
-  );
-  final data = res.data ?? const [];
-  return [
-    for (final raw in data)
-      if (raw is Map<String, dynamic>)
-        EndOfDayReport(
-          id: raw['id'].toString(),
-          businessDate: _parseDate(raw['businessDate']),
-          reportDate: _parseDate(raw['reportDate']),
-          merchantTitle: raw['merchantTitle']?.toString(),
-          workplaceNo: raw['workplaceNo']?.toString(),
-          terminalNo: raw['terminalNo']?.toString(),
-          cardTotal: _numToDouble(raw['cardTotal']),
-          fastTotal: _numToDouble(raw['fastTotal']),
-          createdAt: DateTime.tryParse((raw['createdAt'] ?? '').toString()) ?? DateTime.now(),
-        ),
-  ];
-});
-
-final salesRepositoryProvider =
-    Provider<SalesRepository>((ref) {
-      if (!AppConfig.hasApi) {
-        return const FakeSalesRepository();
-      }
-      return ApiSalesRepository(ref.watch(dioProvider));
+    FutureProvider.family<List<EndOfDayReport>, String>((
+      ref,
+      reconciliationId,
+    ) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<List<dynamic>>(
+        '/cash-reconciliations/$reconciliationId/end-of-day-reports',
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            EndOfDayReport(
+              id: raw['id'].toString(),
+              businessDate: _parseDate(raw['businessDate']),
+              reportDate: _parseDate(raw['reportDate']),
+              merchantTitle: raw['merchantTitle']?.toString(),
+              workplaceNo: raw['workplaceNo']?.toString(),
+              terminalNo: raw['terminalNo']?.toString(),
+              cardTotal: _numToDouble(raw['cardTotal']),
+              fastTotal: _numToDouble(raw['fastTotal']),
+              createdAt:
+                  DateTime.tryParse((raw['createdAt'] ?? '').toString()) ??
+                  DateTime.now(),
+            ),
+      ];
     });
+
+final salesRepositoryProvider = Provider<SalesRepository>((ref) {
+  if (!AppConfig.hasApi) {
+    return const FakeSalesRepository();
+  }
+  return ApiSalesRepository(ref.watch(dioProvider));
+});
 
 abstract class SalesRepository {
   Future<double> getDailySales({
@@ -2356,15 +2552,17 @@ final pendingApprovalsCountProvider = Provider<int>((ref) {
 final mismatchesCountProvider = Provider<int>((ref) {
   final items = ref.watch(reconciliationsProvider);
   return items
-      .where((e) =>
-          e.status != ReconciliationStatus.draft && e.difference.abs() > 0.01)
+      .where(
+        (e) =>
+            e.status != ReconciliationStatus.draft && e.difference.abs() > 0.01,
+      )
       .length;
 });
 
 final inventoryProductsProvider =
     NotifierProvider<InventoryProductsStore, List<InventoryProduct>>(
-  InventoryProductsStore.new,
-);
+      InventoryProductsStore.new,
+    );
 
 class InventoryProductsStore extends Notifier<List<InventoryProduct>> {
   String _query = '';
@@ -2401,9 +2599,7 @@ class InventoryProductsStore extends Notifier<List<InventoryProduct>> {
     final dio = ref.read(dioProvider);
     final res = await dio.get<List<dynamic>>(
       '/inv/products',
-      queryParameters: {
-        if (_query.isNotEmpty) 'q': _query,
-      },
+      queryParameters: {if (_query.isNotEmpty) 'q': _query},
     );
     final data = res.data ?? const [];
     state = [
@@ -2452,8 +2648,8 @@ class InventoryProductsStore extends Notifier<List<InventoryProduct>> {
 
 final inventoryWarehousesProvider =
     NotifierProvider<InventoryWarehousesStore, List<InventoryWarehouse>>(
-  InventoryWarehousesStore.new,
-);
+      InventoryWarehousesStore.new,
+    );
 
 class InventoryWarehousesStore extends Notifier<List<InventoryWarehouse>> {
   String? _branchId;
@@ -2482,6 +2678,7 @@ class InventoryWarehousesStore extends Notifier<List<InventoryWarehouse>> {
   }
 
   void setBranch(String? branchId) {
+    if (_branchId == branchId) return;
     _branchId = branchId;
     if (AppConfig.hasApi) {
       refresh();
@@ -2565,11 +2762,13 @@ class InventoryWarehousesStore extends Notifier<List<InventoryWarehouse>> {
 }
 
 final inventoryTransactionsProvider =
-    NotifierProvider<InventoryTransactionsStore, List<InventoryStockTransaction>>(
-  InventoryTransactionsStore.new,
-);
+    NotifierProvider<
+      InventoryTransactionsStore,
+      List<InventoryStockTransaction>
+    >(InventoryTransactionsStore.new);
 
-class InventoryTransactionsStore extends Notifier<List<InventoryStockTransaction>> {
+class InventoryTransactionsStore
+    extends Notifier<List<InventoryStockTransaction>> {
   String? _branchId;
   String? _warehouseId;
 
@@ -2596,6 +2795,7 @@ class InventoryTransactionsStore extends Notifier<List<InventoryStockTransaction
   }
 
   void setBranch(String? branchId) {
+    if (_branchId == branchId) return;
     _branchId = branchId;
     if (AppConfig.hasApi) {
       refresh();
@@ -2603,6 +2803,7 @@ class InventoryTransactionsStore extends Notifier<List<InventoryStockTransaction
   }
 
   void setWarehouse(String? warehouseId) {
+    if (_warehouseId == warehouseId) return;
     _warehouseId = warehouseId;
     if (AppConfig.hasApi) {
       refresh();
@@ -2616,7 +2817,8 @@ class InventoryTransactionsStore extends Notifier<List<InventoryStockTransaction
       '/inv/stock-transactions',
       queryParameters: {
         if (_branchId != null && _branchId!.isNotEmpty) 'branchId': _branchId,
-        if (_warehouseId != null && _warehouseId!.isNotEmpty) 'warehouseId': _warehouseId,
+        if (_warehouseId != null && _warehouseId!.isNotEmpty)
+          'warehouseId': _warehouseId,
       },
     );
     final data = res.data ?? const [];
@@ -2653,15 +2855,22 @@ class InventoryTransactionsStore extends Notifier<List<InventoryStockTransaction
       data: {
         'branchId': branchId,
         'warehouseId': warehouseId,
-        'businessDate': DateTime(businessDate.year, businessDate.month, businessDate.day)
-            .toIso8601String()
-            .substring(0, 10),
+        'businessDate': DateTime(
+          businessDate.year,
+          businessDate.month,
+          businessDate.day,
+        ).toIso8601String().substring(0, 10),
         'kind': kind,
-        if (referenceNo != null && referenceNo.trim().isNotEmpty) 'referenceNo': referenceNo.trim(),
+        if (referenceNo != null && referenceNo.trim().isNotEmpty)
+          'referenceNo': referenceNo.trim(),
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
         'lines': [
           for (final l in lines)
-            {'productId': l.productId, 'quantity': l.quantity, 'unitCost': l.unitCost},
+            {
+              'productId': l.productId,
+              'quantity': l.quantity,
+              'unitCost': l.unitCost,
+            },
         ],
       },
     );
@@ -2671,8 +2880,8 @@ class InventoryTransactionsStore extends Notifier<List<InventoryStockTransaction
 
 final inventoryCountsProvider =
     NotifierProvider<InventoryCountsStore, List<InventoryStockCount>>(
-  InventoryCountsStore.new,
-);
+      InventoryCountsStore.new,
+    );
 
 class InventoryCountsStore extends Notifier<List<InventoryStockCount>> {
   String? _branchId;
@@ -2702,16 +2911,19 @@ class InventoryCountsStore extends Notifier<List<InventoryStockCount>> {
   }
 
   void setBranch(String? branchId) {
+    if (_branchId == branchId) return;
     _branchId = branchId;
     if (AppConfig.hasApi) refresh();
   }
 
   void setWarehouse(String? warehouseId) {
+    if (_warehouseId == warehouseId) return;
     _warehouseId = warehouseId;
     if (AppConfig.hasApi) refresh();
   }
 
   void setStatus(String? status) {
+    if (_status == status) return;
     _status = status;
     if (AppConfig.hasApi) refresh();
   }
@@ -2743,10 +2955,12 @@ class InventoryCountsStore extends Notifier<List<InventoryStockCount>> {
             createdByUserId: raw['createdByUserId'].toString(),
             approvedByUserId: raw['approvedByUserId']?.toString(),
             rejectionReason: raw['rejectionReason']?.toString(),
-            linesCount: (raw['linesCount'] as num?)?.toInt() ??
+            linesCount:
+                (raw['linesCount'] as num?)?.toInt() ??
                 int.tryParse(raw['linesCount']?.toString() ?? '') ??
                 0,
-            diffAbsTotal: (raw['diffAbsTotal'] as num?)?.toDouble() ??
+            diffAbsTotal:
+                (raw['diffAbsTotal'] as num?)?.toDouble() ??
                 double.tryParse(raw['diffAbsTotal']?.toString() ?? '') ??
                 0,
           ),
@@ -2759,9 +2973,11 @@ class InventoryCountsStore extends Notifier<List<InventoryStockCount>> {
     required DateTime businessDate,
   }) async {
     if (!AppConfig.hasApi) return null;
-    final day = DateTime(businessDate.year, businessDate.month, businessDate.day)
-        .toIso8601String()
-        .substring(0, 10);
+    final day = DateTime(
+      businessDate.year,
+      businessDate.month,
+      businessDate.day,
+    ).toIso8601String().substring(0, 10);
     final dio = ref.read(dioProvider);
     final res = await dio.post<Map<String, dynamic>>(
       '/inv/stock-counts',
@@ -2810,10 +3026,7 @@ class InventoryCountsStore extends Notifier<List<InventoryStockCount>> {
     await refresh();
   }
 
-  Future<void> reject({
-    required String countId,
-    required String reason,
-  }) async {
+  Future<void> reject({required String countId, required String reason}) async {
     if (!AppConfig.hasApi) return;
     final dio = ref.read(dioProvider);
     await dio.post<Map<String, dynamic>>(
@@ -2826,65 +3039,76 @@ class InventoryCountsStore extends Notifier<List<InventoryStockCount>> {
 }
 
 final inventoryStockCountDetailProvider =
-    FutureProvider.family<InventoryStockCountDetail, String>((ref, countId) async {
-  if (!AppConfig.hasApi) {
-    throw StateError('API modu gerekli');
-  }
-  final dio = ref.read(dioProvider);
-  final res = await dio.get<Map<String, dynamic>>('/inv/stock-counts/$countId');
-  final data = res.data;
-  if (data == null) throw StateError('Boş yanıt');
+    FutureProvider.family<InventoryStockCountDetail, String>((
+      ref,
+      countId,
+    ) async {
+      if (!AppConfig.hasApi) {
+        throw StateError('API modu gerekli');
+      }
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<Map<String, dynamic>>(
+        '/inv/stock-counts/$countId',
+      );
+      final data = res.data;
+      if (data == null) throw StateError('Boş yanıt');
 
-  double asDouble(dynamic raw) {
-    if (raw is num) return raw.toDouble();
-    return double.tryParse(raw?.toString() ?? '') ?? 0;
-  }
+      double asDouble(dynamic raw) {
+        if (raw is num) return raw.toDouble();
+        return double.tryParse(raw?.toString() ?? '') ?? 0;
+      }
 
-  final header = InventoryStockCount(
-    id: data['id'].toString(),
-    branchId: data['branchId'].toString(),
-    branchName: data['branchName']?.toString(),
-    warehouseId: data['warehouseId'].toString(),
-    warehouseName: data['warehouseName']?.toString(),
-    businessDate: DateTime.parse(data['businessDate'].toString()),
-    status: (data['status'] ?? '').toString(),
-    createdByUserId: data['createdByUserId'].toString(),
-    approvedByUserId: data['approvedByUserId']?.toString(),
-    rejectionReason: data['rejectionReason']?.toString(),
-    linesCount: (data['lines'] is List) ? (data['lines'] as List).length : 0,
-    diffAbsTotal: asDouble(data['totals']?['diffAbsTotal']),
-  );
+      final header = InventoryStockCount(
+        id: data['id'].toString(),
+        branchId: data['branchId'].toString(),
+        branchName: data['branchName']?.toString(),
+        warehouseId: data['warehouseId'].toString(),
+        warehouseName: data['warehouseName']?.toString(),
+        businessDate: DateTime.parse(data['businessDate'].toString()),
+        status: (data['status'] ?? '').toString(),
+        createdByUserId: data['createdByUserId'].toString(),
+        approvedByUserId: data['approvedByUserId']?.toString(),
+        rejectionReason: data['rejectionReason']?.toString(),
+        linesCount: (data['lines'] is List)
+            ? (data['lines'] as List).length
+            : 0,
+        diffAbsTotal: asDouble(data['totals']?['diffAbsTotal']),
+      );
 
-  final rawLines = data['lines'];
-  final lines = <InventoryStockCountLine>[
-    if (rawLines is List)
-      for (final raw in rawLines)
-        if (raw is Map<String, dynamic>)
-          InventoryStockCountLine(
-            productId: raw['productId'].toString(),
-            productName: (raw['productName'] ?? '').toString(),
-            unit: (raw['unit'] ?? 'adet').toString(),
-            countedQty: asDouble(raw['countedQty']),
-            onhandQty: asDouble(raw['onhandQty']),
-            diffQty: asDouble(raw['diffQty']),
-          ),
-  ];
+      final rawLines = data['lines'];
+      final lines = <InventoryStockCountLine>[
+        if (rawLines is List)
+          for (final raw in rawLines)
+            if (raw is Map<String, dynamic>)
+              InventoryStockCountLine(
+                productId: raw['productId'].toString(),
+                productName: (raw['productName'] ?? '').toString(),
+                unit: (raw['unit'] ?? 'adet').toString(),
+                countedQty: asDouble(raw['countedQty']),
+                onhandQty: asDouble(raw['onhandQty']),
+                diffQty: asDouble(raw['diffQty']),
+              ),
+      ];
 
-  final rawTotals = data['totals'];
-  final totals = InventoryStockCountTotals(
-    countedTotal: asDouble(rawTotals?['countedTotal']),
-    onhandTotal: asDouble(rawTotals?['onhandTotal']),
-    diffTotal: asDouble(rawTotals?['diffTotal']),
-    diffAbsTotal: asDouble(rawTotals?['diffAbsTotal']),
-  );
+      final rawTotals = data['totals'];
+      final totals = InventoryStockCountTotals(
+        countedTotal: asDouble(rawTotals?['countedTotal']),
+        onhandTotal: asDouble(rawTotals?['onhandTotal']),
+        diffTotal: asDouble(rawTotals?['diffTotal']),
+        diffAbsTotal: asDouble(rawTotals?['diffAbsTotal']),
+      );
 
-  return InventoryStockCountDetail(header: header, lines: lines, totals: totals);
-});
+      return InventoryStockCountDetail(
+        header: header,
+        lines: lines,
+        totals: totals,
+      );
+    });
 
 final inventoryRecipesProvider =
     NotifierProvider<InventoryRecipesStore, List<InventoryRecipe>>(
-  InventoryRecipesStore.new,
-);
+      InventoryRecipesStore.new,
+    );
 
 class InventoryRecipesStore extends Notifier<List<InventoryRecipe>> {
   String _query = '';
@@ -2919,9 +3143,7 @@ class InventoryRecipesStore extends Notifier<List<InventoryRecipe>> {
     final dio = ref.read(dioProvider);
     final res = await dio.get<List<dynamic>>(
       '/inv/recipes',
-      queryParameters: {
-        if (_query.isNotEmpty) 'q': _query,
-      },
+      queryParameters: {if (_query.isNotEmpty) 'q': _query},
     );
     final data = res.data ?? const [];
     state = [
@@ -2934,14 +3156,17 @@ class InventoryRecipesStore extends Notifier<List<InventoryRecipe>> {
             code: raw['code']?.toString(),
             name: (raw['name'] ?? '').toString(),
             description: raw['description']?.toString(),
-            yieldQty: (raw['yieldQty'] as num?)?.toDouble() ??
+            yieldQty:
+                (raw['yieldQty'] as num?)?.toDouble() ??
                 double.tryParse(raw['yieldQty']?.toString() ?? '') ??
                 1,
             yieldUnit: (raw['yieldUnit'] ?? 'adet').toString(),
-            gimOran: (raw['gimOran'] as num?)?.toDouble() ??
+            gimOran:
+                (raw['gimOran'] as num?)?.toDouble() ??
                 double.tryParse(raw['gimOran']?.toString() ?? ''),
             isActive: (raw['isActive'] as bool?) ?? true,
-            linesCount: (raw['linesCount'] as num?)?.toInt() ??
+            linesCount:
+                (raw['linesCount'] as num?)?.toInt() ??
                 int.tryParse(raw['linesCount']?.toString() ?? '') ??
                 0,
           ),
@@ -2956,8 +3181,15 @@ class InventoryRecipesStore extends Notifier<List<InventoryRecipe>> {
     required double yieldQty,
     required String yieldUnit,
     double? gimOran,
-    required List<({String ingredientProductId, double quantity, String? unit, double? wasteRate})>
-        lines,
+    required List<
+      ({
+        String ingredientProductId,
+        double quantity,
+        String? unit,
+        double? wasteRate,
+      })
+    >
+    lines,
   }) async {
     if (!AppConfig.hasApi) return null;
     final dio = ref.read(dioProvider);
@@ -3007,59 +3239,67 @@ class InventoryRecipesStore extends Notifier<List<InventoryRecipe>> {
 
 final inventoryRecipeDetailProvider =
     FutureProvider.family<InventoryRecipeDetail, String>((ref, recipeId) async {
-  if (!AppConfig.hasApi) {
-    throw StateError('API modu gerekli');
-  }
-  final dio = ref.read(dioProvider);
-  final res = await dio.get<Map<String, dynamic>>('/inv/recipes/$recipeId');
-  final data = res.data;
-  if (data == null) throw StateError('Boş yanıt');
+      if (!AppConfig.hasApi) {
+        throw StateError('API modu gerekli');
+      }
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<Map<String, dynamic>>('/inv/recipes/$recipeId');
+      final data = res.data;
+      if (data == null) throw StateError('Boş yanıt');
 
-  double asDouble(dynamic raw, [double fallback = 0]) {
-    if (raw is num) return raw.toDouble();
-    return double.tryParse(raw?.toString() ?? '') ?? fallback;
-  }
+      double asDouble(dynamic raw, [double fallback = 0]) {
+        if (raw is num) return raw.toDouble();
+        return double.tryParse(raw?.toString() ?? '') ?? fallback;
+      }
 
-  final header = InventoryRecipe(
-    id: data['id'].toString(),
-    productId: data['productId'].toString(),
-    productName: (data['productName'] ?? '').toString(),
-    code: data['code']?.toString(),
-    name: (data['name'] ?? '').toString(),
-    description: data['description']?.toString(),
-    yieldQty: asDouble(data['yieldQty'], 1),
-    yieldUnit: (data['yieldUnit'] ?? 'adet').toString(),
-    gimOran: data['gimOran'] == null ? null : asDouble(data['gimOran']),
-    isActive: (data['isActive'] as bool?) ?? true,
-    linesCount: (data['lines'] is List) ? (data['lines'] as List).length : 0,
-  );
+      final header = InventoryRecipe(
+        id: data['id'].toString(),
+        productId: data['productId'].toString(),
+        productName: (data['productName'] ?? '').toString(),
+        code: data['code']?.toString(),
+        name: (data['name'] ?? '').toString(),
+        description: data['description']?.toString(),
+        yieldQty: asDouble(data['yieldQty'], 1),
+        yieldUnit: (data['yieldUnit'] ?? 'adet').toString(),
+        gimOran: data['gimOran'] == null ? null : asDouble(data['gimOran']),
+        isActive: (data['isActive'] as bool?) ?? true,
+        linesCount: (data['lines'] is List)
+            ? (data['lines'] as List).length
+            : 0,
+      );
 
-  final rawLines = data['lines'];
-  final lines = <InventoryRecipeLine>[
-    if (rawLines is List)
-      for (final raw in rawLines)
-        if (raw is Map<String, dynamic>)
-          InventoryRecipeLine(
-            ingredientProductId: raw['ingredientProductId'].toString(),
-            ingredientProductName: (raw['ingredientProductName'] ?? '').toString(),
-            unit: (raw['unit'] ?? 'adet').toString(),
-            quantity: asDouble(raw['quantity']),
-            wasteRate: asDouble(raw['wasteRate']),
-            avgUnitCost: asDouble(raw['avgUnitCost']),
-            lineCost: asDouble(raw['lineCost']),
-          ),
-  ];
+      final rawLines = data['lines'];
+      final lines = <InventoryRecipeLine>[
+        if (rawLines is List)
+          for (final raw in rawLines)
+            if (raw is Map<String, dynamic>)
+              InventoryRecipeLine(
+                ingredientProductId: raw['ingredientProductId'].toString(),
+                ingredientProductName: (raw['ingredientProductName'] ?? '')
+                    .toString(),
+                unit: (raw['unit'] ?? 'adet').toString(),
+                quantity: asDouble(raw['quantity']),
+                wasteRate: asDouble(raw['wasteRate']),
+                avgUnitCost: asDouble(raw['avgUnitCost']),
+                lineCost: asDouble(raw['lineCost']),
+              ),
+      ];
 
-  final rawTotals = data['totals'];
-  final totals = InventoryRecipeTotals(
-    recipeCost: asDouble(rawTotals?['recipeCost']),
-  );
+      final rawTotals = data['totals'];
+      final totals = InventoryRecipeTotals(
+        recipeCost: asDouble(rawTotals?['recipeCost']),
+      );
 
-  return InventoryRecipeDetail(header: header, lines: lines, totals: totals);
-});
+      return InventoryRecipeDetail(
+        header: header,
+        lines: lines,
+        totals: totals,
+      );
+    });
 
-final crmFirmsProvider =
-    NotifierProvider<CrmFirmsStore, List<CrmFirm>>(CrmFirmsStore.new);
+final crmFirmsProvider = NotifierProvider<CrmFirmsStore, List<CrmFirm>>(
+  CrmFirmsStore.new,
+);
 
 class CrmFirmsStore extends Notifier<List<CrmFirm>> {
   String _query = '';
@@ -3094,9 +3334,7 @@ class CrmFirmsStore extends Notifier<List<CrmFirm>> {
     final dio = ref.read(dioProvider);
     final res = await dio.get<List<dynamic>>(
       '/crm/firms',
-      queryParameters: {
-        if (_query.isNotEmpty) 'q': _query,
-      },
+      queryParameters: {if (_query.isNotEmpty) 'q': _query},
     );
     final data = res.data ?? const [];
     double? asDouble(dynamic raw) {
@@ -3181,8 +3419,10 @@ class CrmFirmsStore extends Notifier<List<CrmFirm>> {
   }
 }
 
-final crmFirmDetailProvider =
-    FutureProvider.family<CrmFirm, String>((ref, id) async {
+final crmFirmDetailProvider = FutureProvider.family<CrmFirm, String>((
+  ref,
+  id,
+) async {
   if (!AppConfig.hasApi) throw StateError('API modu gerekli');
   final dio = ref.read(dioProvider);
   final res = await dio.get<Map<String, dynamic>>('/crm/firms/$id');
@@ -3232,32 +3472,35 @@ final crmFirmDetailProvider =
 });
 
 final inventoryOnHandProvider =
-    FutureProvider.family<List<InventoryOnHand>, ({String branchId, String? warehouseId})>(
-  (ref, arg) async {
-    if (!AppConfig.hasApi) return const [];
-    final dio = ref.read(dioProvider);
-    final res = await dio.get<List<dynamic>>(
-      '/inv/stock-on-hand',
-      queryParameters: {
-        'branchId': arg.branchId,
-        if (arg.warehouseId != null && arg.warehouseId!.isNotEmpty) 'warehouseId': arg.warehouseId,
-      },
-    );
-    final data = res.data ?? const [];
-    return [
-      for (final raw in data)
-        if (raw is Map<String, dynamic>)
-          InventoryOnHand(
-            productId: raw['productId'].toString(),
-            productName: (raw['productName'] ?? '').toString(),
-            unit: (raw['unit'] ?? 'adet').toString(),
-            quantity: (raw['quantity'] as num?)?.toDouble() ??
-                double.tryParse(raw['quantity']?.toString() ?? '') ??
-                0,
-          ),
-    ];
-  },
-);
+    FutureProvider.family<
+      List<InventoryOnHand>,
+      ({String branchId, String? warehouseId})
+    >((ref, arg) async {
+      if (!AppConfig.hasApi) return const [];
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<List<dynamic>>(
+        '/inv/stock-on-hand',
+        queryParameters: {
+          'branchId': arg.branchId,
+          if (arg.warehouseId != null && arg.warehouseId!.isNotEmpty)
+            'warehouseId': arg.warehouseId,
+        },
+      );
+      final data = res.data ?? const [];
+      return [
+        for (final raw in data)
+          if (raw is Map<String, dynamic>)
+            InventoryOnHand(
+              productId: raw['productId'].toString(),
+              productName: (raw['productName'] ?? '').toString(),
+              unit: (raw['unit'] ?? 'adet').toString(),
+              quantity:
+                  (raw['quantity'] as num?)?.toDouble() ??
+                  double.tryParse(raw['quantity']?.toString() ?? '') ??
+                  0,
+            ),
+      ];
+    });
 
 extension _FirstOrNullX<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;

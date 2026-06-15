@@ -10,40 +10,42 @@ class ProsmartApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
 
-    const crmBlue = Color(0xFF3C4E62);
-    const crmBorder = Color(0xFFCCCCCC);
-    const crmInputBorder = Color(0xFF999999);
-    const crmBg = Color(0xFFF4F4F4);
-    const crmText = Color(0xFF414141);
+    const primary = Color(0xFF253444);
+    const border = Color(0xFFD8DEE6);
+    const bg = Color(0xFFF5F7FA);
+    const text = Color(0xFF24313D);
+    const accent = Color(0xFF168D7C);
 
     return MaterialApp.router(
       title: 'Prosmart',
       theme: ThemeData(
-        useMaterial3: false,
-        fontFamily: 'Tahoma',
-        fontFamilyFallback: const ['Tahoma', 'Segoe UI', 'Arial'],
+        useMaterial3: true,
+        fontFamily: 'Inter',
+        fontFamilyFallback: const ['Inter', 'Segoe UI', 'Arial'],
         visualDensity: VisualDensity.compact,
-        scaffoldBackgroundColor: crmBg,
+        scaffoldBackgroundColor: bg,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: crmBlue,
+          seedColor: primary,
           brightness: Brightness.light,
         ).copyWith(
-          primary: crmBlue,
-          secondary: crmBlue,
+          primary: primary,
+          secondary: accent,
+          tertiary: const Color(0xFF8FD3C7),
           surface: Colors.white,
+          onSurface: text,
         ),
         textTheme: const TextTheme(
-          bodySmall: TextStyle(fontSize: 11, color: crmText),
-          bodyMedium: TextStyle(fontSize: 12, color: crmText),
-          bodyLarge: TextStyle(fontSize: 13, color: crmText),
-          titleSmall: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: crmText),
-          titleMedium: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: crmText),
-          titleLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: crmText),
-          headlineSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: crmText),
-          headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: crmText),
+          bodySmall: TextStyle(fontSize: 12, color: text),
+          bodyMedium: TextStyle(fontSize: 13, color: text),
+          bodyLarge: TextStyle(fontSize: 14, color: text),
+          titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: text),
+          titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: text),
+          titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: text),
+          headlineSmall: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: text),
+          headlineMedium: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: text),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: crmBlue,
+          backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: false,
@@ -53,70 +55,77 @@ class ProsmartApp extends ConsumerWidget {
           elevation: 0,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.zero,
-            side: BorderSide(color: crmBorder),
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            side: BorderSide(color: border),
           ),
         ),
-        dividerTheme: const DividerThemeData(color: crmBorder, thickness: 1),
+        dividerTheme: const DividerThemeData(color: border, thickness: 1),
         inputDecorationTheme: const InputDecorationTheme(
           filled: true,
-          fillColor: Color(0xFFFAFAFA),
+          fillColor: Colors.white,
           isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 13),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.zero,
-            borderSide: BorderSide(color: crmInputBorder),
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            borderSide: BorderSide(color: border),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.zero,
-            borderSide: BorderSide(color: crmInputBorder),
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            borderSide: BorderSide(color: border),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.zero,
-            borderSide: BorderSide(color: crmBlue, width: 1.5),
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            borderSide: BorderSide(color: primary, width: 1.5),
           ),
-          labelStyle: TextStyle(color: crmText),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            borderSide: BorderSide(color: Color(0xFFBA1A1A)),
+          ),
+          labelStyle: TextStyle(color: text),
         ),
         listTileTheme: const ListTileThemeData(
           dense: true,
-          iconColor: crmBlue,
+          iconColor: primary,
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         ),
         dataTableTheme: const DataTableThemeData(
-          headingRowColor: WidgetStatePropertyAll(crmBlue),
+          headingRowColor: WidgetStatePropertyAll(primary),
           headingTextStyle: TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             fontSize: 12,
           ),
-          dataTextStyle: TextStyle(fontSize: 12, color: crmText),
+          dataTextStyle: TextStyle(fontSize: 12, color: text),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFE5E5E5),
-            foregroundColor: crmText,
-            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            backgroundColor: primary,
+            foregroundColor: Colors.white,
+            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.zero,
-              side: BorderSide(color: crmInputBorder),
+              borderRadius: BorderRadius.all(Radius.circular(8)),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: crmText,
-            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-            side: const BorderSide(color: crmInputBorder),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            foregroundColor: primary,
+            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
+            side: const BorderSide(color: border),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           ),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: crmBlue,
-            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+            foregroundColor: primary,
+            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
           ),
         ),
         snackBarTheme: const SnackBarThemeData(

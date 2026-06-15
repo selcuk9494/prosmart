@@ -12,7 +12,8 @@ class InventoryInvoicesPage extends ConsumerStatefulWidget {
   const InventoryInvoicesPage({super.key});
 
   @override
-  ConsumerState<InventoryInvoicesPage> createState() => _InventoryInvoicesPageState();
+  ConsumerState<InventoryInvoicesPage> createState() =>
+      _InventoryInvoicesPageState();
 }
 
 class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
@@ -26,14 +27,16 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
     final role = session?.role ?? UserRole.branchUser;
     final canEdit = role == UserRole.manager || role == UserRole.accounting;
 
-    final branches = ref.watch(branchesProvider).where((e) => e.isActive).toList();
-    _selectedBranchId ??= session?.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
+    final branches = ref
+        .watch(branchesProvider)
+        .where((e) => e.isActive)
+        .toList();
+    _selectedBranchId ??=
+        session?.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
 
-    ref.read(inventoryInvoicesProvider.notifier).setFilters(
-          branchId: _selectedBranchId,
-          from: _from,
-          to: _to,
-        );
+    ref
+        .read(inventoryInvoicesProvider.notifier)
+        .setFilters(branchId: _selectedBranchId, from: _from, to: _to);
     final items = ref.watch(inventoryInvoicesProvider);
 
     return ListView(
@@ -47,7 +50,10 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
               onPressed: !canEdit || _selectedBranchId == null
                   ? null
                   : () async {
-                      final createdId = await _createInvoiceDialog(context, branchId: _selectedBranchId!);
+                      final createdId = await _createInvoiceDialog(
+                        context,
+                        branchId: _selectedBranchId!,
+                      );
                       if (createdId != null && context.mounted) {
                         context.go('/inv/invoices/$createdId');
                       }
@@ -61,13 +67,14 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
         DropdownButtonFormField<String>(
           initialValue: _selectedBranchId,
           items: [
-            for (final b in branches) DropdownMenuItem(value: b.id, child: Text(b.name)),
+            for (final b in branches)
+              DropdownMenuItem(value: b.id, child: Text(b.name)),
           ],
           onChanged: role == UserRole.branchUser
               ? null
               : (v) => setState(() {
-                    _selectedBranchId = v;
-                  }),
+                  _selectedBranchId = v;
+                }),
           decoration: const InputDecoration(labelText: 'Şube'),
         ),
         const SizedBox(height: 12),
@@ -128,7 +135,9 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
                 for (final i in items)
                   ListTile(
                     title: Text(i.invoiceNo),
-                    subtitle: Text('${_fmt(i.invoiceDate)}${i.vendorName == null ? '' : ' • ${i.vendorName}'}'),
+                    subtitle: Text(
+                      '${_fmt(i.invoiceDate)}${i.vendorName == null ? '' : ' • ${i.vendorName}'}',
+                    ),
                     trailing: Text((i.total ?? 0).toStringAsFixed(2)),
                     onTap: () => context.go('/inv/invoices/${i.id}'),
                   ),
@@ -139,7 +148,10 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
     );
   }
 
-  Future<String?> _createInvoiceDialog(BuildContext context, {required String branchId}) async {
+  Future<String?> _createInvoiceDialog(
+    BuildContext context, {
+    required String branchId,
+  }) async {
     final invoiceNoController = TextEditingController();
     final vendorController = TextEditingController();
     final notesController = TextEditingController();
@@ -167,7 +179,10 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
                       decoration: const InputDecoration(labelText: 'Tarih'),
                       child: InkWell(
                         onTap: () async {
-                          final picked = await _pickDate(context, initial: invoiceDate);
+                          final picked = await _pickDate(
+                            context,
+                            initial: invoiceDate,
+                          );
                           if (picked == null) return;
                           setState(() => invoiceDate = picked);
                         },
@@ -177,12 +192,16 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: vendorController,
-                      decoration: const InputDecoration(labelText: 'Tedarikçi (opsiyonel)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Tedarikçi (opsiyonel)',
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: notesController,
-                      decoration: const InputDecoration(labelText: 'Not (opsiyonel)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Not (opsiyonel)',
+                      ),
                       maxLines: 2,
                     ),
                   ],
@@ -198,12 +217,18 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
                     final no = invoiceNoController.text.trim();
                     if (no.isEmpty) return;
                     try {
-                      final id = await ref.read(inventoryInvoicesProvider.notifier).create(
+                      final id = await ref
+                          .read(inventoryInvoicesProvider.notifier)
+                          .create(
                             branchId: branchId,
                             invoiceNo: no,
                             invoiceDate: invoiceDate,
-                            vendorName: vendorController.text.trim().isEmpty ? null : vendorController.text.trim(),
-                            notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+                            vendorName: vendorController.text.trim().isEmpty
+                                ? null
+                                : vendorController.text.trim(),
+                            notes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
                           );
                       if (id == null) {
                         if (context.mounted) {
@@ -216,9 +241,9 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
                       if (context.mounted) Navigator.of(context).pop(id);
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(_errText(e))),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(_errText(e))));
                       }
                     }
                   },
@@ -244,10 +269,12 @@ class InventoryInvoiceDetailPage extends ConsumerStatefulWidget {
   final String invoiceId;
 
   @override
-  ConsumerState<InventoryInvoiceDetailPage> createState() => _InventoryInvoiceDetailPageState();
+  ConsumerState<InventoryInvoiceDetailPage> createState() =>
+      _InventoryInvoiceDetailPageState();
 }
 
-class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDetailPage> {
+class _InventoryInvoiceDetailPageState
+    extends ConsumerState<InventoryInvoiceDetailPage> {
   final _invoiceNoController = TextEditingController();
   final _vendorController = TextEditingController();
   final _notesController = TextEditingController();
@@ -296,24 +323,40 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
     final role = session?.role ?? UserRole.branchUser;
     final canEdit = role == UserRole.manager || role == UserRole.accounting;
 
-    final paymentTypes = ref.watch(paymentTypesProvider).where((e) => e.isActive).toList();
-    final incomeCenters = ref.watch(incomeCentersProvider).where((e) => e.isActive).toList();
-    final products = ref.watch(inventoryProductsProvider).where((e) => e.isActive).take(50).toList();
+    final paymentTypes = ref
+        .watch(paymentTypesProvider)
+        .where((e) => e.isActive)
+        .toList();
+    final incomeCenters = ref
+        .watch(incomeCentersProvider)
+        .where((e) => e.isActive)
+        .toList();
+    final products = ref
+        .watch(inventoryProductsProvider)
+        .where((e) => e.isActive)
+        .take(50)
+        .toList();
 
     final detail = ref.watch(inventoryInvoiceDetailProvider(widget.invoiceId));
     return detail.when(
       data: (data) {
         final header = data.header;
         final lines = data.lines;
+        final stockPost = data.stockPost;
         final total = lines.fold(0.0, (p, e) => p + e.lineTotal);
+        final hasStockLines = lines.any(
+          (e) => e.productId != null && e.productId!.isNotEmpty,
+        );
 
         if (!_initialized) {
           _invoiceNoController.text = header.invoiceNo;
           _vendorController.text = header.vendorName ?? '';
           _notesController.text = header.notes ?? '';
           _discountRateController.text = header.discountRate?.toString() ?? '';
-          _discountAmountController.text = header.discountAmount?.toString() ?? '';
-          _mealVoucherDiscountController.text = header.mealVoucherDiscount?.toString() ?? '';
+          _discountAmountController.text =
+              header.discountAmount?.toString() ?? '';
+          _mealVoucherDiscountController.text =
+              header.mealVoucherDiscount?.toString() ?? '';
           _invoiceDate = header.invoiceDate;
           _paymentDate = header.paymentDate;
           _paymentTypeId = header.paymentTypeId;
@@ -323,17 +366,25 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
 
         final paymentTypeIds = paymentTypes.map((e) => e.id).toSet();
         final paymentTypeValue =
-            (_paymentTypeId != null && paymentTypeIds.contains(_paymentTypeId)) ? _paymentTypeId : null;
+            (_paymentTypeId != null && paymentTypeIds.contains(_paymentTypeId))
+            ? _paymentTypeId
+            : null;
         final incomeCenterIds = incomeCenters.map((e) => e.id).toSet();
         final incomeCenterValue =
-            (_incomeCenterId != null && incomeCenterIds.contains(_incomeCenterId)) ? _incomeCenterId : null;
+            (_incomeCenterId != null &&
+                incomeCenterIds.contains(_incomeCenterId))
+            ? _incomeCenterId
+            : null;
 
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             Row(
               children: [
-                Text('Alış Faturası - Ekleme', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Alış Faturası - Ekleme',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const Spacer(),
                 OutlinedButton(
                   onPressed: () => context.go('/inv/invoices'),
@@ -357,7 +408,9 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _invoiceNoController,
                             enabled: canEdit,
-                            decoration: const InputDecoration(labelText: 'Fatura No'),
+                            decoration: const InputDecoration(
+                              labelText: 'Fatura No',
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -365,13 +418,17 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _vendorController,
                             enabled: canEdit,
-                            decoration: const InputDecoration(labelText: 'Firma'),
+                            decoration: const InputDecoration(
+                              labelText: 'Firma',
+                            ),
                           ),
                         ),
                         SizedBox(
                           width: 260,
                           child: InputDecorator(
-                            decoration: const InputDecoration(labelText: 'Ödeme Türü'),
+                            decoration: const InputDecoration(
+                              labelText: 'Ödeme Türü',
+                            ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String?>(
                                 isExpanded: true,
@@ -399,7 +456,9 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                         SizedBox(
                           width: 260,
                           child: InputDecorator(
-                            decoration: const InputDecoration(labelText: 'Gelir Merkezi'),
+                            decoration: const InputDecoration(
+                              labelText: 'Gelir Merkezi',
+                            ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String?>(
                                 isExpanded: true,
@@ -430,12 +489,21 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                             onTap: !canEdit
                                 ? null
                                 : () async {
-                                    final picked = await _pickDate(context, initial: _invoiceDate);
-                                    if (picked != null) setState(() => _invoiceDate = picked);
+                                    final picked = await _pickDate(
+                                      context,
+                                      initial: _invoiceDate,
+                                    );
+                                    if (picked != null) {
+                                      setState(() => _invoiceDate = picked);
+                                    }
                                   },
                             child: InputDecorator(
-                              decoration: const InputDecoration(labelText: 'Fatura Tarihi'),
-                              child: Text(_invoiceDate == null ? '' : _fmt(_invoiceDate!)),
+                              decoration: const InputDecoration(
+                                labelText: 'Fatura Tarihi',
+                              ),
+                              child: Text(
+                                _invoiceDate == null ? '' : _fmt(_invoiceDate!),
+                              ),
                             ),
                           ),
                         ),
@@ -445,12 +513,21 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                             onTap: !canEdit
                                 ? null
                                 : () async {
-                                    final picked = await _pickDate(context, initial: _paymentDate);
-                                    if (picked != null) setState(() => _paymentDate = picked);
+                                    final picked = await _pickDate(
+                                      context,
+                                      initial: _paymentDate,
+                                    );
+                                    if (picked != null) {
+                                      setState(() => _paymentDate = picked);
+                                    }
                                   },
                             child: InputDecorator(
-                              decoration: const InputDecoration(labelText: 'Ödeme Tarihi'),
-                              child: Text(_paymentDate == null ? '' : _fmt(_paymentDate!)),
+                              decoration: const InputDecoration(
+                                labelText: 'Ödeme Tarihi',
+                              ),
+                              child: Text(
+                                _paymentDate == null ? '' : _fmt(_paymentDate!),
+                              ),
                             ),
                           ),
                         ),
@@ -459,8 +536,12 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _discountRateController,
                             enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'Genel İndirim (%)'),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Genel İndirim (%)',
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -468,8 +549,12 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _discountAmountController,
                             enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'İndirim Tutar'),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'İndirim Tutar',
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -477,8 +562,12 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _mealVoucherDiscountController,
                             enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'Yemek Çeki İndirim'),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Yemek Çeki İndirim',
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -486,7 +575,9 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _notesController,
                             enabled: canEdit,
-                            decoration: const InputDecoration(labelText: 'Açıklama'),
+                            decoration: const InputDecoration(
+                              labelText: 'Açıklama',
+                            ),
                           ),
                         ),
                       ],
@@ -494,38 +585,134 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Text('Toplam: ${total.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
-                        const Spacer(),
-                        FilledButton(
-                          onPressed: !canEdit
+                        Expanded(
+                          child: Wrap(
+                            spacing: 16,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                'Toplam: ${total.toStringAsFixed(2)}',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Chip(
+                                avatar: Icon(
+                                  stockPost == null
+                                      ? Icons.inventory_2_outlined
+                                      : Icons.check_circle_outline,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  stockPost == null
+                                      ? 'Stoka işlenmedi'
+                                      : '${stockPost.warehouseName ?? 'Depo'}: ${stockPost.linesCount} satır işlendi',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: !canEdit || !hasStockLines
                               ? null
                               : () async {
-                                  final rate = double.tryParse(_discountRateController.text.replaceAll(',', '.'));
-                                  final amount = double.tryParse(_discountAmountController.text.replaceAll(',', '.'));
-                                  final meal = double.tryParse(_mealVoucherDiscountController.text.replaceAll(',', '.'));
                                   try {
-                                    await ref.read(inventoryInvoiceActionsProvider).updateHeader(
-                                          widget.invoiceId,
-                                          invoiceNo: _invoiceNoController.text.trim(),
-                                          invoiceDate: _invoiceDate,
-                                          vendorName: _vendorController.text.trim(),
-                                          notes: _notesController.text.trim(),
-                                          paymentTypeId: _paymentTypeId ?? '',
-                                          incomeCenterId: _incomeCenterId ?? '',
-                                          discountRate: _discountRateController.text.trim().isEmpty ? null : rate,
-                                          discountAmount: _discountAmountController.text.trim().isEmpty ? null : amount,
-                                          mealVoucherDiscount:
-                                              _mealVoucherDiscountController.text.trim().isEmpty ? null : meal,
-                                          paymentDate: _paymentDate,
-                                        );
+                                    await ref
+                                        .read(inventoryInvoiceActionsProvider)
+                                        .postToStock(widget.invoiceId);
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Kaydedildi.')),
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Fatura stoğa işlendi.',
+                                          ),
+                                        ),
                                       );
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text(_errText(e))),
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: const Icon(Icons.move_down_outlined),
+                          label: const Text('Stoka İşle'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: !canEdit
+                              ? null
+                              : () async {
+                                  final rate = double.tryParse(
+                                    _discountRateController.text.replaceAll(
+                                      ',',
+                                      '.',
+                                    ),
+                                  );
+                                  final amount = double.tryParse(
+                                    _discountAmountController.text.replaceAll(
+                                      ',',
+                                      '.',
+                                    ),
+                                  );
+                                  final meal = double.tryParse(
+                                    _mealVoucherDiscountController.text
+                                        .replaceAll(',', '.'),
+                                  );
+                                  try {
+                                    await ref
+                                        .read(inventoryInvoiceActionsProvider)
+                                        .updateHeader(
+                                          widget.invoiceId,
+                                          invoiceNo: _invoiceNoController.text
+                                              .trim(),
+                                          invoiceDate: _invoiceDate,
+                                          vendorName: _vendorController.text
+                                              .trim(),
+                                          notes: _notesController.text.trim(),
+                                          paymentTypeId: _paymentTypeId ?? '',
+                                          incomeCenterId: _incomeCenterId ?? '',
+                                          discountRate:
+                                              _discountRateController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? null
+                                              : rate,
+                                          discountAmount:
+                                              _discountAmountController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? null
+                                              : amount,
+                                          mealVoucherDiscount:
+                                              _mealVoucherDiscountController
+                                                  .text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? null
+                                              : meal,
+                                          paymentDate: _paymentDate,
+                                        );
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Kaydedildi.'),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(content: Text(_errText(e))),
                                       );
                                     }
@@ -545,14 +732,18 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                 Expanded(
                   child: _OpenDocsCard(
                     title: 'Açık İrsaliyeler',
-                    provider: ref.watch(inventoryOpenDeliveryNotesProvider(header.branchId)),
+                    provider: ref.watch(
+                      inventoryOpenDeliveryNotesProvider(header.branchId),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _OpenDocsCard(
                     title: 'Açık Siparişler',
-                    provider: ref.watch(inventoryOpenPurchaseOrdersProvider(header.branchId)),
+                    provider: ref.watch(
+                      inventoryOpenPurchaseOrdersProvider(header.branchId),
+                    ),
                   ),
                 ),
               ],
@@ -564,7 +755,10 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Stok Kalemleri Ekleme', style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      'Stok Kalemleri Ekleme',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 12,
@@ -576,17 +770,25 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _productQueryController,
                             enabled: canEdit,
-                            decoration: const InputDecoration(labelText: 'Ürün Ara'),
+                            decoration: const InputDecoration(
+                              labelText: 'Ürün Ara',
+                            ),
                           ),
                         ),
                         SizedBox(
                           width: 420,
                           child: InputDecorator(
-                            decoration: const InputDecoration(labelText: 'Stok Kalemi'),
+                            decoration: const InputDecoration(
+                              labelText: 'Stok Kalemi',
+                            ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String?>(
                                 isExpanded: true,
-                                value: _selectedProduct?.id != null && products.any((p) => p.id == _selectedProduct!.id)
+                                value:
+                                    _selectedProduct?.id != null &&
+                                        products.any(
+                                          (p) => p.id == _selectedProduct!.id,
+                                        )
                                     ? _selectedProduct!.id
                                     : null,
                                 items: [
@@ -597,7 +799,9 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                                   for (final p in products)
                                     DropdownMenuItem<String?>(
                                       value: p.id,
-                                      child: Text('${p.code ?? ''} ${p.name}'.trim()),
+                                      child: Text(
+                                        '${p.code ?? ''} ${p.name}'.trim(),
+                                      ),
                                     ),
                                 ],
                                 onChanged: !canEdit
@@ -627,8 +831,12 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _qtyController,
                             enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'Miktar'),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Miktar',
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -636,24 +844,43 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                           child: TextField(
                             controller: _unitPriceController,
                             enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'Birim Fiyat'),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Birim Fiyat',
+                            ),
                           ),
                         ),
                         FilledButton(
                           onPressed: !canEdit
                               ? null
                               : () async {
-                                  final qty = double.tryParse(_qtyController.text.replaceAll(',', '.'));
-                                  final price = double.tryParse(_unitPriceController.text.replaceAll(',', '.'));
-                                  if (_selectedProduct == null || qty == null || price == null) {
+                                  final qty = double.tryParse(
+                                    _qtyController.text.replaceAll(',', '.'),
+                                  );
+                                  final price = double.tryParse(
+                                    _unitPriceController.text.replaceAll(
+                                      ',',
+                                      '.',
+                                    ),
+                                  );
+                                  if (_selectedProduct == null ||
+                                      qty == null ||
+                                      price == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Ürün, miktar ve birim fiyat gerekli.')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'Ürün, miktar ve birim fiyat gerekli.',
+                                        ),
+                                      ),
                                     );
                                     return;
                                   }
                                   try {
-                                    await ref.read(inventoryInvoiceActionsProvider).addLine(
+                                    await ref
+                                        .read(inventoryInvoiceActionsProvider)
+                                        .addLine(
                                           invoiceId: widget.invoiceId,
                                           productId: _selectedProduct!.id,
                                           description: _selectedProduct!.name,
@@ -669,7 +896,9 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                                     });
                                   } catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(content: Text(_errText(e))),
                                       );
                                     }
@@ -709,24 +938,38 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
                       for (var i = 0; i < lines.length; i++)
                         DataRow(
                           color: WidgetStatePropertyAll(
-                            i.isEven ? const Color(0xFFFFFFFF) : const Color(0xFFF4F4F4),
+                            i.isEven
+                                ? const Color(0xFFFFFFFF)
+                                : const Color(0xFFF4F4F4),
                           ),
                           cells: [
                             DataCell(Text(lines[i].productCode ?? '')),
-                            DataCell(Text(lines[i].productName ?? lines[i].description)),
+                            DataCell(
+                              Text(
+                                lines[i].productName ?? lines[i].description,
+                              ),
+                            ),
                             DataCell(Text(lines[i].unit ?? '')),
-                            DataCell(Text(lines[i].quantity.toStringAsFixed(2))),
-                            DataCell(Text(lines[i].unitPrice.toStringAsFixed(2))),
-                            DataCell(Text(lines[i].lineTotal.toStringAsFixed(2))),
+                            DataCell(
+                              Text(lines[i].quantity.toStringAsFixed(2)),
+                            ),
+                            DataCell(
+                              Text(lines[i].unitPrice.toStringAsFixed(2)),
+                            ),
+                            DataCell(
+                              Text(lines[i].lineTotal.toStringAsFixed(2)),
+                            ),
                             DataCell(
                               IconButton(
                                 tooltip: 'Sil',
                                 onPressed: !canEdit
                                     ? null
-                                    : () => ref.read(inventoryInvoiceActionsProvider).deleteLine(
-                                          invoiceId: widget.invoiceId,
-                                          lineId: lines[i].id,
-                                        ),
+                                    : () => ref
+                                          .read(inventoryInvoiceActionsProvider)
+                                          .deleteLine(
+                                            invoiceId: widget.invoiceId,
+                                            lineId: lines[i].id,
+                                          ),
                                 icon: const Icon(Icons.delete_outline),
                               ),
                             ),
@@ -746,10 +989,7 @@ class _InventoryInvoiceDetailPageState extends ConsumerState<InventoryInvoiceDet
 }
 
 class _OpenDocsCard extends ConsumerWidget {
-  const _OpenDocsCard({
-    required this.title,
-    required this.provider,
-  });
+  const _OpenDocsCard({required this.title, required this.provider});
 
   final String title;
   final AsyncValue<List<InventoryOpenDocument>> provider;

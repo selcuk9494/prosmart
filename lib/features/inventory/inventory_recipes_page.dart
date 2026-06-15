@@ -12,7 +12,8 @@ class InventoryRecipesPage extends ConsumerStatefulWidget {
   const InventoryRecipesPage({super.key});
 
   @override
-  ConsumerState<InventoryRecipesPage> createState() => _InventoryRecipesPageState();
+  ConsumerState<InventoryRecipesPage> createState() =>
+      _InventoryRecipesPageState();
 }
 
 class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
@@ -30,10 +31,15 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
     final role = session?.role ?? UserRole.branchUser;
     final canEdit = role == UserRole.manager || role == UserRole.accounting;
 
-    ref.read(inventoryRecipesProvider.notifier).setQuery(_searchController.text);
+    ref
+        .read(inventoryRecipesProvider.notifier)
+        .setQuery(_searchController.text);
     final items = ref.watch(inventoryRecipesProvider);
 
-    final products = ref.watch(inventoryProductsProvider).where((p) => p.isActive).toList();
+    final products = ref
+        .watch(inventoryProductsProvider)
+        .where((p) => p.isActive)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -45,9 +51,14 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
             FilledButton.icon(
               onPressed: canEdit && products.isNotEmpty
                   ? () async {
-                      final form = await _createDialog(context, products: products);
+                      final form = await _createDialog(
+                        context,
+                        products: products,
+                      );
                       if (form == null) return;
-                      final id = await ref.read(inventoryRecipesProvider.notifier).upsert(
+                      final id = await ref
+                          .read(inventoryRecipesProvider.notifier)
+                          .upsert(
                             productId: form.productId,
                             code: form.code,
                             name: form.name,
@@ -58,7 +69,9 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
                             lines: const [],
                           );
                       if (!context.mounted) return;
-                      if (id != null && id.isNotEmpty) context.go('/inv/recipes/$id');
+                      if (id != null && id.isNotEmpty) {
+                        context.go('/inv/recipes/$id');
+                      }
                     }
                   : null,
               icon: const Icon(Icons.add),
@@ -152,15 +165,23 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
                           for (final p in products)
                             DropdownMenuItem(
                               value: p.id,
-                              child: Text([p.code, p.name].whereType<String>().where((e) => e.isNotEmpty).join(' • ')),
+                              child: Text(
+                                [p.code, p.name]
+                                    .whereType<String>()
+                                    .where((e) => e.isNotEmpty)
+                                    .join(' • '),
+                              ),
                             ),
                         ],
                         onChanged: (v) {
                           final found =
-                              products.where((p) => p.id == v).firstOrNull ?? products.first;
+                              products.where((p) => p.id == v).firstOrNull ??
+                              products.first;
                           setState(() => selectedProduct = found);
                         },
-                        decoration: const InputDecoration(labelText: 'Ürün Adı'),
+                        decoration: const InputDecoration(
+                          labelText: 'Ürün Adı',
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -168,14 +189,18 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
                           Expanded(
                             child: TextFormField(
                               controller: codeController,
-                              decoration: const InputDecoration(labelText: 'Ürün Kodu (opsiyonel)'),
+                              decoration: const InputDecoration(
+                                labelText: 'Ürün Kodu (opsiyonel)',
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextFormField(
                               controller: yieldUnitController,
-                              decoration: const InputDecoration(labelText: 'Reçete Birimi'),
+                              decoration: const InputDecoration(
+                                labelText: 'Reçete Birimi',
+                              ),
                             ),
                           ),
                         ],
@@ -186,13 +211,22 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
                           Expanded(
                             child: TextFormField(
                               controller: yieldQtyController,
-                              decoration: const InputDecoration(labelText: 'Porsiyon Miktarı'),
+                              decoration: const InputDecoration(
+                                labelText: 'Porsiyon Miktarı',
+                              ),
                               keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               validator: (v) {
-                                final raw = (v ?? '').trim().replaceAll(',', '.');
+                                final raw = (v ?? '').trim().replaceAll(
+                                  ',',
+                                  '.',
+                                );
                                 final n = double.tryParse(raw);
-                                if (n == null || n <= 0) return 'Geçersiz miktar';
+                                if (n == null || n <= 0) {
+                                  return 'Geçersiz miktar';
+                                }
                                 return null;
                               },
                             ),
@@ -201,9 +235,13 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
                           Expanded(
                             child: TextFormField(
                               controller: gimOranController,
-                              decoration: const InputDecoration(labelText: 'GİM Oranı (opsiyonel)'),
+                              decoration: const InputDecoration(
+                                labelText: 'GİM Oranı (opsiyonel)',
+                              ),
                               keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                             ),
                           ),
                         ],
@@ -211,12 +249,16 @@ class _InventoryRecipesPageState extends ConsumerState<InventoryRecipesPage> {
                       const SizedBox(height: 10),
                       TextFormField(
                         controller: nameController,
-                        decoration: const InputDecoration(labelText: 'Reçete Adı (opsiyonel)'),
+                        decoration: const InputDecoration(
+                          labelText: 'Reçete Adı (opsiyonel)',
+                        ),
                       ),
                       const SizedBox(height: 10),
                       TextFormField(
                         controller: descController,
-                        decoration: const InputDecoration(labelText: 'Reçete Açıklaması'),
+                        decoration: const InputDecoration(
+                          labelText: 'Reçete Açıklaması',
+                        ),
                         maxLines: 2,
                       ),
                     ],
@@ -275,10 +317,12 @@ class InventoryRecipeDetailPage extends ConsumerStatefulWidget {
   final String recipeId;
 
   @override
-  ConsumerState<InventoryRecipeDetailPage> createState() => _InventoryRecipeDetailPageState();
+  ConsumerState<InventoryRecipeDetailPage> createState() =>
+      _InventoryRecipeDetailPageState();
 }
 
-class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetailPage> {
+class _InventoryRecipeDetailPageState
+    extends ConsumerState<InventoryRecipeDetailPage> {
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
@@ -316,7 +360,10 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
     final role = session?.role ?? UserRole.branchUser;
     final canEdit = role == UserRole.manager || role == UserRole.accounting;
 
-    final products = ref.watch(inventoryProductsProvider).where((p) => p.isActive).toList();
+    final products = ref
+        .watch(inventoryProductsProvider)
+        .where((p) => p.isActive)
+        .toList();
     final detail = ref.watch(inventoryRecipeDetailProvider(widget.recipeId));
 
     return detail.when(
@@ -336,12 +383,24 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
         final h = data.header;
 
         _selectedProductId ??= h.productId;
-        _codeController.text = (_codeController.text.isEmpty ? (h.code ?? '') : _codeController.text);
-        _nameController.text = (_nameController.text.isEmpty ? h.name : _nameController.text);
-        _descController.text = (_descController.text.isEmpty ? (h.description ?? '') : _descController.text);
-        _yieldQtyController.text = (_yieldQtyController.text.isEmpty ? h.yieldQty.toString() : _yieldQtyController.text);
-        _yieldUnitController.text = (_yieldUnitController.text.isEmpty ? h.yieldUnit : _yieldUnitController.text);
-        _gimOranController.text = (_gimOranController.text.isEmpty ? (h.gimOran?.toString() ?? '') : _gimOranController.text);
+        _codeController.text = (_codeController.text.isEmpty
+            ? (h.code ?? '')
+            : _codeController.text);
+        _nameController.text = (_nameController.text.isEmpty
+            ? h.name
+            : _nameController.text);
+        _descController.text = (_descController.text.isEmpty
+            ? (h.description ?? '')
+            : _descController.text);
+        _yieldQtyController.text = (_yieldQtyController.text.isEmpty
+            ? h.yieldQty.toString()
+            : _yieldQtyController.text);
+        _yieldUnitController.text = (_yieldUnitController.text.isEmpty
+            ? h.yieldUnit
+            : _yieldUnitController.text);
+        _gimOranController.text = (_gimOranController.text.isEmpty
+            ? (h.gimOran?.toString() ?? '')
+            : _gimOranController.text);
 
         for (final l in data.lines) {
           _qtyControllers.putIfAbsent(
@@ -359,7 +418,10 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
           children: [
             Row(
               children: [
-                Text('Yeni Reçete', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Yeni Reçete',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const Spacer(),
                 if (canEdit)
                   FilledButton(
@@ -379,12 +441,21 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                   children: [
                     Expanded(
                       flex: 5,
-                      child: _leftForm(context, canEdit: canEdit, products: products),
+                      child: _leftForm(
+                        context,
+                        canEdit: canEdit,
+                        products: products,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 7,
-                      child: _rightPanel(context, data, canEdit: canEdit, products: products),
+                      child: _rightPanel(
+                        context,
+                        data,
+                        canEdit: canEdit,
+                        products: products,
+                      ),
                     ),
                   ],
                 ),
@@ -423,10 +494,7 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
     }
 
     return Table(
-      columnWidths: const {
-        0: FixedColumnWidth(170),
-        1: FlexColumnWidth(),
-      },
+      columnWidths: const {0: FixedColumnWidth(170), 1: FlexColumnWidth()},
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       border: const TableBorder(
         top: BorderSide(color: border),
@@ -444,10 +512,17 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                   for (final p in products)
                     DropdownMenuItem(
                       value: p.id,
-                      child: Text([p.code, p.name].whereType<String>().where((e) => e.isNotEmpty).join(' • ')),
+                      child: Text(
+                        [p.code, p.name]
+                            .whereType<String>()
+                            .where((e) => e.isNotEmpty)
+                            .join(' • '),
+                      ),
                     ),
                 ],
-                onChanged: canEdit ? (v) => setState(() => _selectedProductId = v) : null,
+                onChanged: canEdit
+                    ? (v) => setState(() => _selectedProductId = v)
+                    : null,
                 decoration: const InputDecoration(isDense: true),
               ),
             ),
@@ -460,7 +535,9 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
               TextFormField(
                 controller: _yieldQtyController,
                 enabled: canEdit,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(isDense: true),
               ),
             ),
@@ -471,8 +548,15 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
             label('Reçete Maliyeti'),
             cell(
               Text(
-                NumberFormat('#,##0.0000', 'tr_TR')
-                    .format(ref.watch(inventoryRecipeDetailProvider(widget.recipeId)).asData?.value.totals.recipeCost ?? 0),
+                NumberFormat('#,##0.0000', 'tr_TR').format(
+                  ref
+                          .watch(inventoryRecipeDetailProvider(widget.recipeId))
+                          .asData
+                          ?.value
+                          .totals
+                          .recipeCost ??
+                      0,
+                ),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -520,7 +604,9 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
               ),
               if (canEdit)
                 OutlinedButton(
-                  onPressed: () => ref.invalidate(inventoryRecipeDetailProvider(widget.recipeId)),
+                  onPressed: () => ref.invalidate(
+                    inventoryRecipeDetailProvider(widget.recipeId),
+                  ),
                   child: const Text('Hesapla'),
                 ),
             ],
@@ -567,7 +653,9 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                     isDense: true,
                     labelText: 'GİM Oranı',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
             ],
@@ -591,7 +679,13 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                 onPressed: products.isEmpty
                     ? null
                     : () async {
-                        final pick = await _pickIngredient(context, products: products, existing: data.lines.map((e) => e.ingredientProductId).toSet());
+                        final pick = await _pickIngredient(
+                          context,
+                          products: products,
+                          existing: data.lines
+                              .map((e) => e.ingredientProductId)
+                              .toSet(),
+                        );
                         if (pick == null) return;
                         setState(() {
                           _qtyControllers.putIfAbsent(
@@ -617,18 +711,14 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
     required bool canEdit,
     required List<InventoryProduct> products,
   }) {
-    double asDouble(TextEditingController? c) {
-      final raw = (c?.text ?? '').trim().replaceAll(',', '.');
-      return double.tryParse(raw) ?? 0;
-    }
-
     final allLines = <InventoryRecipeLine>[
       ...data.lines,
       for (final id in _qtyControllers.keys)
         if (data.lines.every((l) => l.ingredientProductId != id))
           InventoryRecipeLine(
             ingredientProductId: id,
-            ingredientProductName: products.where((p) => p.id == id).firstOrNull?.name ?? '?',
+            ingredientProductName:
+                products.where((p) => p.id == id).firstOrNull?.name ?? '?',
             unit: products.where((p) => p.id == id).firstOrNull?.unit ?? 'adet',
             quantity: 0,
             wasteRate: 0,
@@ -664,11 +754,14 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                       enabled: canEdit,
                       controller: _qtyControllers.putIfAbsent(
                         allLines[i].ingredientProductId,
-                        () => TextEditingController(text: allLines[i].quantity.toString()),
+                        () => TextEditingController(
+                          text: allLines[i].quantity.toString(),
+                        ),
                       ),
                       decoration: const InputDecoration(isDense: true),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                   ),
                 ),
@@ -679,11 +772,14 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                       enabled: canEdit,
                       controller: _wasteControllers.putIfAbsent(
                         allLines[i].ingredientProductId,
-                        () => TextEditingController(text: allLines[i].wasteRate.toString()),
+                        () => TextEditingController(
+                          text: allLines[i].wasteRate.toString(),
+                        ),
                       ),
                       decoration: const InputDecoration(isDense: true),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                   ),
                 ),
@@ -708,27 +804,54 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
     List<InventoryRecipeLine> existingLines,
   ) async {
     if (_selectedProductId == null) return;
-    final yieldQty = double.tryParse(_yieldQtyController.text.trim().replaceAll(',', '.')) ?? 1;
-    final gimOran = double.tryParse(_gimOranController.text.trim().replaceAll(',', '.'));
+    final yieldQty =
+        double.tryParse(_yieldQtyController.text.trim().replaceAll(',', '.')) ??
+        1;
+    final gimOran = double.tryParse(
+      _gimOranController.text.trim().replaceAll(',', '.'),
+    );
 
-    final lineIds = _qtyControllers.keys.toSet().union(existingLines.map((e) => e.ingredientProductId).toSet());
-    final payload = <({String ingredientProductId, double quantity, String? unit, double? wasteRate})>[];
+    final lineIds = _qtyControllers.keys.toSet().union(
+      existingLines.map((e) => e.ingredientProductId).toSet(),
+    );
+    final payload =
+        <
+          ({
+            String ingredientProductId,
+            double quantity,
+            String? unit,
+            double? wasteRate,
+          })
+        >[];
     for (final id in lineIds) {
-      final qty = double.tryParse((_qtyControllers[id]?.text ?? '').trim().replaceAll(',', '.')) ?? 0;
+      final qty =
+          double.tryParse(
+            (_qtyControllers[id]?.text ?? '').trim().replaceAll(',', '.'),
+          ) ??
+          0;
       if (qty <= 0) continue;
-      final waste = double.tryParse((_wasteControllers[id]?.text ?? '').trim().replaceAll(',', '.'));
-      payload.add(
-        (ingredientProductId: id, quantity: qty, unit: null, wasteRate: waste),
+      final waste = double.tryParse(
+        (_wasteControllers[id]?.text ?? '').trim().replaceAll(',', '.'),
       );
+      payload.add((
+        ingredientProductId: id,
+        quantity: qty,
+        unit: null,
+        wasteRate: waste,
+      ));
     }
 
-    final id = await ref.read(inventoryRecipesProvider.notifier).upsert(
+    final id = await ref
+        .read(inventoryRecipesProvider.notifier)
+        .upsert(
           productId: _selectedProductId!,
           code: _codeController.text.trim(),
           name: _nameController.text.trim(),
           description: _descController.text.trim(),
           yieldQty: yieldQty,
-          yieldUnit: _yieldUnitController.text.trim().isEmpty ? 'adet' : _yieldUnitController.text.trim(),
+          yieldUnit: _yieldUnitController.text.trim().isEmpty
+              ? 'adet'
+              : _yieldUnitController.text.trim(),
           gimOran: gimOran,
           lines: payload,
         );
@@ -737,9 +860,9 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
     if (id != null && id.isNotEmpty && id != widget.recipeId) {
       context.go('/inv/recipes/$id');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kaydedildi.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Kaydedildi.')));
     }
   }
 
@@ -785,7 +908,12 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                         for (final p in filtered)
                           DropdownMenuItem(
                             value: p.id,
-                            child: Text([p.code, p.name].whereType<String>().where((e) => e.isNotEmpty).join(' • ')),
+                            child: Text(
+                              [p.code, p.name]
+                                  .whereType<String>()
+                                  .where((e) => e.isNotEmpty)
+                                  .join(' • '),
+                            ),
                           ),
                       ],
                       onChanged: (v) => setState(() {
@@ -802,7 +930,9 @@ class _InventoryRecipeDetailPageState extends ConsumerState<InventoryRecipeDetai
                   child: const Text('İptal'),
                 ),
                 FilledButton(
-                  onPressed: selected == null ? null : () => Navigator.of(context).pop(selected!.id),
+                  onPressed: selected == null
+                      ? null
+                      : () => Navigator.of(context).pop(selected!.id),
                   child: const Text('Ekle'),
                 ),
               ],

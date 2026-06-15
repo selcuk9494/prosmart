@@ -1,12 +1,14 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/api_client.dart';
+import '../../app/config.dart';
 import '../../domain/models.dart';
 import '../../domain/stores.dart';
+import '../auth/auth_controller.dart';
+import '../auth/auth_models.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -16,655 +18,482 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
-  DateTime? _fromDate;
-  DateTime? _toDate;
+  DateTime _businessDate = _dayOnly(DateTime.now());
+  String? _branchId;
+  var _syncingBranchId = '';
+  var _approvingId = '';
 
-  DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+  static DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  @override
-  void initState() {
-    super.initState();
-    final today = _dayOnly(DateTime.now());
-    _fromDate = today.subtract(const Duration(days: 13));
-    _toDate = today;
-  }
-
-  DateTime _weekStart(DateTime d) {
-    final wd = d.weekday;
-    return d.subtract(Duration(days: wd - DateTime.monday));
-  }
-
-  DateTime _monthStart(DateTime d) => DateTime(d.year, d.month, 1);
-  DateTime _monthEnd(DateTime d) => DateTime(d.year, d.month + 1, 0);
-
-  bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
-
-  Future<void> _pickFromDate() async {
-    final current = _fromDate ?? _dayOnly(DateTime.now());
-    final picked = await showDatePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-      initialDate: current,
-    );
-    if (picked == null) return;
-    setState(() {
-      _fromDate = _dayOnly(picked);
-      if (_toDate == null || _toDate!.isBefore(_fromDate!)) {
-        _toDate = _fromDate;
-      }
-    });
-  }
-
-  Future<void> _pickToDate() async {
-    final current = _toDate ?? _dayOnly(DateTime.now());
-    final picked = await showDatePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-      initialDate: current,
-    );
-    if (picked == null) return;
-    setState(() {
-      _toDate = _dayOnly(picked);
-      if (_fromDate == null || _fromDate!.isAfter(_toDate!)) {
-        _fromDate = _toDate;
-      }
-    });
-  }
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   @override
   Widget build(BuildContext context) {
-    final pending = ref.watch(pendingApprovalsCountProvider);
-    final mismatches = ref.watch(mismatchesCountProvider);
-    final branches = ref.watch(branchesProvider).where((e) => e.isActive).toList();
-    final allRecs = ref.watch(reconciliationsProvider);
-    final recent = allRecs.take(6).toList();
+    final session = ref.watch(authControllerProvider).asData?.value;
+    final role = session?.role ?? UserRole.branchUser;
+    final branches = ref
+        .watch(branchesProvider)
+        .where((e) => e.isActive)
+        .toList();
+    final reconciliations = ref.watch(reconciliationsProvider);
+    final dataSources = ref.watch(branchDataSourcesProvider);
+    final posStatuses = ref.watch(posPullStatusesProvider);
     final money = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
+    final dateLabel = DateFormat('yyyy-MM-dd', 'tr_TR').format(_businessDate);
+    final dateQuery = 'from=$dateLabel&to=$dateLabel';
 
-    final today = _dayOnly(DateTime.now());
-    final from = _fromDate ?? today.subtract(const Duration(days: 13));
-    final to = _toDate ?? today;
-    final window = allRecs.where((r) {
-      final d = _dayOnly(r.date);
-      return !d.isBefore(from) && !d.isAfter(to);
-    }).toList();
-
-    final statusCounts = <ReconciliationStatus, int>{
-      ReconciliationStatus.draft: 0,
-      ReconciliationStatus.submitted: 0,
-      ReconciliationStatus.approved: 0,
-      ReconciliationStatus.rejected: 0,
+    final accessibleBranches = switch (role) {
+      UserRole.branchUser =>
+        branches.where((b) => b.id == session?.branchId).toList(),
+      _ => branches,
     };
-    for (final r in window) {
-      statusCounts[r.status] = (statusCounts[r.status] ?? 0) + 1;
-    }
+    final selectedBranches = _branchId == null
+        ? accessibleBranches
+        : accessibleBranches.where((b) => b.id == _branchId).toList();
 
-    final okCount = window
-        .where((r) => r.status != ReconciliationStatus.draft && r.difference.abs() <= 0.01)
-        .length;
-    final mismatchCount = window
-        .where((r) => r.status != ReconciliationStatus.draft && r.difference.abs() > 0.01)
-        .length;
-    final missingDocsCount = window
-        .where((r) => r.status != ReconciliationStatus.draft && missingRequiredAttachmentKinds(r).isNotEmpty)
-        .length;
-
-    final statusSegments = <_DonutSegment>[
-      _DonutSegment(
-        label: 'Taslak',
-        value: (statusCounts[ReconciliationStatus.draft] ?? 0).toDouble(),
-        color: Theme.of(context).colorScheme.outline,
-      ),
-      _DonutSegment(
-        label: 'Onay Bekliyor',
-        value: (statusCounts[ReconciliationStatus.submitted] ?? 0).toDouble(),
-        color: Colors.orange.shade700,
-      ),
-      _DonutSegment(
-        label: 'Onaylandı',
-        value: (statusCounts[ReconciliationStatus.approved] ?? 0).toDouble(),
-        color: Colors.green.shade700,
-      ),
-      _DonutSegment(
-        label: 'Reddedildi',
-        value: (statusCounts[ReconciliationStatus.rejected] ?? 0).toDouble(),
-        color: Theme.of(context).colorScheme.error,
-      ),
-    ];
-
-    final qualitySegments = <_DonutSegment>[
-      _DonutSegment(
-        label: 'Sorunsuz',
-        value: okCount.toDouble(),
-        color: Colors.green.shade700,
-      ),
-      _DonutSegment(
-        label: 'Fark Var',
-        value: mismatchCount.toDouble(),
-        color: Theme.of(context).colorScheme.error,
-      ),
-      _DonutSegment(
-        label: 'Evrak Eksik',
-        value: missingDocsCount.toDouble(),
-        color: Colors.orange.shade800,
-      ),
-    ];
-
-    final days = <DateTime>[];
-    for (var d = from; !d.isAfter(to); d = d.add(const Duration(days: 1))) {
-      days.add(d);
-    }
-    final salesSeries = <DateTime, double>{
-      for (final d in days) d: 0,
+    final dataSourceByBranch = {for (final d in dataSources) d.branchId: d};
+    final posByBranch = {
+      for (final p in posStatuses.asData?.value ?? const <PosPullStatus>[])
+        p.branchId: p,
     };
-    for (final r in window) {
-      final d = _dayOnly(r.date);
-      salesSeries[d] = (salesSeries[d] ?? 0) + r.expectedSalesTotal;
-    }
 
-    final branchSales = <String, double>{};
-    for (final r in window) {
-      branchSales[r.branchId] = (branchSales[r.branchId] ?? 0) + r.expectedSalesTotal;
-    }
-    final branchNameById = {for (final b in branches) b.id: b.name};
-    final branchSalesSorted = branchSales.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    final palette = [
-      Colors.blue.shade700,
-      Colors.green.shade700,
-      Colors.orange.shade700,
-      Colors.purple.shade700,
-      Colors.teal.shade700,
-      Colors.indigo.shade700,
-      Colors.red.shade700,
-      Colors.brown.shade700,
+    final rows = [
+      for (final branch in selectedBranches)
+        _CloseRow(
+          branch: branch,
+          dataSource: dataSourceByBranch[branch.id],
+          posStatus: posByBranch[branch.id],
+          reconciliation: reconciliations.where((r) {
+            return r.branchId == branch.id &&
+                _sameDay(_dayOnly(r.date), _businessDate);
+          }).firstOrNull,
+        ),
     ];
-    final branchSegments = <_DonutSegment>[];
-    var otherTotal = 0.0;
-    for (var i = 0; i < branchSalesSorted.length; i++) {
-      final e = branchSalesSorted[i];
-      final name = branchNameById[e.key] ?? '?';
-      if (i < 8) {
-        branchSegments.add(_DonutSegment(label: name, value: e.value, color: palette[i % palette.length]));
-      } else {
-        otherTotal += e.value;
-      }
-    }
-    if (otherTotal > 0) {
-      branchSegments.add(_DonutSegment(label: 'Diğer', value: otherTotal, color: Theme.of(context).colorScheme.outline));
-    }
 
-    final isSingleDay = _sameDay(from, to);
-    final missingBranches = <Branch>[];
-    final draftBranches = <Branch>[];
-    if (isSingleDay) {
-      for (final b in branches) {
-        CashReconciliation? rec;
-        for (final r in allRecs) {
-          if (r.branchId == b.id && _sameDay(_dayOnly(r.date), from)) {
-            rec = r;
-            break;
-          }
-        }
-        if (rec == null) {
-          missingBranches.add(b);
-        } else if (rec.status == ReconciliationStatus.draft) {
-          draftBranches.add(b);
-        }
-      }
-    }
-
+    final totalSales = rows.fold<double>(
+      0,
+      (sum, r) => sum + (r.reconciliation?.expectedSalesTotal ?? 0),
+    );
+    final missingReconciliation = rows
+        .where((r) => r.reconciliation == null)
+        .length;
+    final needsAccounting = rows.where((r) => r.needsAccounting).length;
+    final hasDifference = rows.where((r) => r.hasDifference).length;
+    final waitingApproval = rows
+        .where(
+          (r) => r.reconciliation?.status == ReconciliationStatus.submitted,
+        )
+        .length;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Text('Tarih', style: Theme.of(context).textTheme.titleMedium),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _fromDate = today.subtract(const Duration(days: 13));
-                          _toDate = today;
-                        });
-                      },
-                      child: const Text('Sıfırla'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Bugün'),
-                      selected: _fromDate != null && _toDate != null && _sameDay(_fromDate!, today) && _sameDay(_toDate!, today),
-                      onSelected: (_) => setState(() {
-                        _fromDate = today;
-                        _toDate = today;
-                      }),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Dün'),
-                      selected: _fromDate != null &&
-                          _toDate != null &&
-                          _sameDay(_fromDate!, today.subtract(const Duration(days: 1))) &&
-                          _sameDay(_toDate!, today.subtract(const Duration(days: 1))),
-                      onSelected: (_) => setState(() {
-                        final d = today.subtract(const Duration(days: 1));
-                        _fromDate = d;
-                        _toDate = d;
-                      }),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Bu hafta'),
-                      selected: _fromDate != null && _toDate != null && _sameDay(_fromDate!, _weekStart(today)) && _sameDay(_toDate!, today),
-                      onSelected: (_) => setState(() {
-                        _fromDate = _weekStart(today);
-                        _toDate = today;
-                      }),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Son 7 gün'),
-                      selected: _fromDate != null &&
-                          _toDate != null &&
-                          _sameDay(_fromDate!, today.subtract(const Duration(days: 6))) &&
-                          _sameDay(_toDate!, today),
-                      onSelected: (_) => setState(() {
-                        _fromDate = today.subtract(const Duration(days: 6));
-                        _toDate = today;
-                      }),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Bu ay'),
-                      selected: _fromDate != null && _toDate != null && _sameDay(_fromDate!, _monthStart(today)) && _sameDay(_toDate!, today),
-                      onSelected: (_) => setState(() {
-                        _fromDate = _monthStart(today);
-                        _toDate = today;
-                      }),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Geçen ay'),
-                      selected: () {
-                        if (_fromDate == null || _toDate == null) return false;
-                        final lastMonth = DateTime(today.year, today.month - 1, 1);
-                        return _sameDay(_fromDate!, _monthStart(lastMonth)) && _sameDay(_toDate!, _monthEnd(lastMonth));
-                      }(),
-                      onSelected: (_) => setState(() {
-                        final lastMonth = DateTime(today.year, today.month - 1, 1);
-                        _fromDate = _monthStart(lastMonth);
-                        _toDate = _monthEnd(lastMonth);
-                      }),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    SizedBox(
-                      width: 260,
-                      child: OutlinedButton(
-                        onPressed: _pickFromDate,
-                        child: Text('Başlangıç: ${DateFormat('yyyy-MM-dd', 'tr_TR').format(from)}'),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 260,
-                      child: OutlinedButton(
-                        onPressed: _pickToDate,
-                        child: Text('Bitiş: ${DateFormat('yyyy-MM-dd', 'tr_TR').format(to)}'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        _Toolbar(
+          dateLabel: dateLabel,
+          branches: accessibleBranches,
+          selectedBranchId: _branchId,
+          onPickDate: _pickDate,
+          onToday: () =>
+              setState(() => _businessDate = _dayOnly(DateTime.now())),
+          onBranchChanged: role == UserRole.branchUser
+              ? null
+              : (value) => setState(() => _branchId = value),
+          onRefresh: _refresh,
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _KpiCard(
-              title: 'Onay Bekleyen',
-              value: pending.toString(),
-              icon: Icons.verified_outlined,
-              color: Colors.orange,
-              onTap: pending == 0 ? null : () => context.go('/reconciliations'),
-            ),
-            _KpiCard(
-              title: 'Farklılık Olan',
-              value: mismatches.toString(),
-              icon: Icons.warning_amber,
-              color: Colors.red,
-              onTap: mismatches == 0 ? null : () => context.go('/reconciliations'),
-            ),
-            _TodaySalesCard(branches: branches),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _PosPullStatusCard(branches: branches),
-        const SizedBox(height: 16),
-        Text(
-          'Akış Özeti (${DateFormat('yyyy-MM-dd', 'tr_TR').format(from)} → ${DateFormat('yyyy-MM-dd', 'tr_TR').format(to)})',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 8),
         LayoutBuilder(
-          builder: (context, c) {
-            final isWide = c.maxWidth >= 1100;
-            final charts = [
-              Expanded(
-                child: _ChartCard(
-                  title: 'Durum Dağılımı',
-                  subtitle: 'Taslak / Onay Bekliyor / Onaylandı / Reddedildi',
-                  child: _DonutWithLegend(segments: statusSegments),
-                ),
-              ),
-              const SizedBox(width: 12, height: 12),
-              Expanded(
-                child: _ChartCard(
-                  title: 'Kalite',
-                  subtitle: 'Sorunsuz / Fark Var / Evrak Eksik',
-                  child: _DonutWithLegend(segments: qualitySegments),
-                ),
-              ),
-              const SizedBox(width: 12, height: 12),
-              Expanded(
-                child: _ChartCard(
-                  title: 'Günlük Ciro (Toplam)',
-                  subtitle: 'Seçili tarih aralığında gün gün toplam ciro. Her çubuk = o günün tüm şubeler toplamı.',
-                  child: _BarChart(
-                    series: [
-                      for (final e in salesSeries.entries) _BarPoint(date: e.key, value: e.value),
-                    ],
-                  ),
-                ),
-              ),
-            ];
-
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: charts,
-              );
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final cardWidth = width >= 1100 ? (width - 48) / 5 : 220.0;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
-                _ChartCard(
-                  title: 'Durum Dağılımı',
-                  subtitle: 'Taslak / Onay Bekliyor / Onaylandı / Reddedildi',
-                  child: _DonutWithLegend(segments: statusSegments),
+                _StatCard(
+                  width: cardWidth,
+                  title: 'Eksik İcmal',
+                  value: missingReconciliation.toString(),
+                  icon: Icons.note_add_outlined,
+                  color: Colors.orange.shade800,
+                  onTap: missingReconciliation == 0
+                      ? null
+                      : () => context.go('/reconciliations?$dateQuery'),
                 ),
-                const SizedBox(height: 12),
-                _ChartCard(
-                  title: 'Kalite',
-                  subtitle: 'Sorunsuz / Fark Var / Evrak Eksik',
-                  child: _DonutWithLegend(segments: qualitySegments),
+                _StatCard(
+                  width: cardWidth,
+                  title: 'Muhasebe Bekliyor',
+                  value: needsAccounting.toString(),
+                  icon: Icons.payments_outlined,
+                  color: Colors.blue.shade800,
+                  onTap: needsAccounting == 0
+                      ? null
+                      : () => context.go('/reconciliations?$dateQuery'),
                 ),
-                const SizedBox(height: 12),
-                _ChartCard(
-                  title: 'Günlük Ciro (Toplam)',
-                  subtitle: 'Seçili tarih aralığında gün gün toplam ciro. Her çubuk = o günün tüm şubeler toplamı.',
-                  child: _BarChart(
-                    series: [
-                      for (final e in salesSeries.entries) _BarPoint(date: e.key, value: e.value),
-                    ],
-                  ),
+                _StatCard(
+                  width: cardWidth,
+                  title: 'Fark Var',
+                  value: hasDifference.toString(),
+                  icon: Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error,
+                  onTap: hasDifference == 0
+                      ? null
+                      : () => context.go(
+                          '/reconciliations?$dateQuery&onlyMismatched=1',
+                        ),
+                ),
+                _StatCard(
+                  width: cardWidth,
+                  title: 'Onay Bekliyor',
+                  value: waitingApproval.toString(),
+                  icon: Icons.verified_outlined,
+                  color: Colors.purple.shade700,
+                  onTap: waitingApproval == 0
+                      ? null
+                      : () => context.go(
+                          '/reconciliations?$dateQuery&status=submitted',
+                        ),
+                ),
+                _StatCard(
+                  width: cardWidth,
+                  title: 'Ciro',
+                  value: money.format(totalSales),
+                  icon: Icons.trending_up,
+                  color: Colors.green.shade700,
+                  onTap: null,
                 ),
               ],
             );
           },
         ),
         const SizedBox(height: 12),
-        _ChartCard(
-          title: 'Şube Ciro Dağılımı',
-          subtitle: 'Seçili tarihlerde şube bazlı ciro',
-          child: branchSegments.isEmpty
-              ? const Center(child: Text('Veri yok.'))
-              : _DonutWithLegend(
-                  segments: branchSegments,
-                  valueFormatter: (v) => money.format(v),
-                  centerLabel: 'Toplam',
-                ),
-        ),
-        if (isSingleDay) ...[
-          const SizedBox(height: 12),
-          _ChartCard(
-            title: 'Eksik İcmal',
-            subtitle: 'Seçili gün için icmali olmayan / taslak kalan şubeler',
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
                   children: [
-                    Chip(label: Text('Eksik: ${missingBranches.length}')),
-                    const SizedBox(width: 8),
-                    Chip(label: Text('Taslak: ${draftBranches.length}')),
+                    Text(
+                      'Günlük Kapanış',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    Text('${rows.length} şube'),
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (missingBranches.isEmpty && draftBranches.isEmpty)
-                  const Text('Hepsi tamam.'),
-                if (missingBranches.isNotEmpty) ...[
-                  Text('İcmali yok', style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final b in missingBranches) Chip(label: Text(b.name)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (draftBranches.isNotEmpty) ...[
-                  Text('Taslak', style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final b in draftBranches) Chip(label: Text(b.name)),
-                    ],
-                  ),
-                ],
+                if (rows.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Aktif şube bulunamadı.'),
+                  )
+                else
+                  for (final row in rows) ...[
+                    _BranchCloseTile(
+                      row: row,
+                      role: role,
+                      money: money,
+                      isSyncing: _syncingBranchId == row.branch.id,
+                      isApproving: _approvingId == row.reconciliation?.id,
+                      onSync: row.hasConnection && _syncingBranchId.isEmpty
+                          ? () => _syncBranch(row.branch)
+                          : null,
+                      onOpen: row.reconciliation == null
+                          ? null
+                          : () => context.go(
+                              '/reconciliations/${row.reconciliation!.id}',
+                            ),
+                      onCreateOrOpen: () => _createOrOpen(row),
+                      onApprove:
+                          role == UserRole.manager &&
+                              row.reconciliation?.status ==
+                                  ReconciliationStatus.submitted &&
+                              _approvingId.isEmpty
+                          ? () => _approve(row.reconciliation!)
+                          : null,
+                    ),
+                    if (row != rows.last) const Divider(height: 1),
+                  ],
               ],
             ),
           ),
-        ],
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text('Son Kasa İcmal', style: Theme.of(context).textTheme.titleLarge),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => context.go('/reconciliations'),
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Tümü'),
-            ),
-          ],
         ),
-        const SizedBox(height: 8),
-        if (recent.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Henüz kayıt yok. Kasa icmali oluşturarak başlayın.'),
-            ),
-          )
-        else
-          Card(
-            child: Column(
-              children: [
-                for (final r in recent) _ReconciliationTile(item: r),
-              ],
-            ),
-          ),
+        const SizedBox(height: 12),
+        _ApprovalFocusCard(
+          rows: rows.where((r) {
+            final rec = r.reconciliation;
+            return rec != null &&
+                (rec.status == ReconciliationStatus.submitted ||
+                    r.hasDifference ||
+                    r.missingDocs.isNotEmpty);
+          }).toList(),
+          money: money,
+          onOpen: (id) => context.go('/reconciliations/$id'),
+        ),
       ],
     );
   }
-}
 
-class _TodaySalesCard extends ConsumerWidget {
-  const _TodaySalesCard({required this.branches});
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      initialDate: _businessDate,
+    );
+    if (picked == null) return;
+    setState(() => _businessDate = _dayOnly(picked));
+  }
 
-  final List<Branch> branches;
+  Future<void> _refresh() async {
+    ref.invalidate(posPullStatusesProvider);
+    await ref.read(reconciliationsProvider.notifier).refresh();
+    await ref.read(branchesProvider.notifier).refresh();
+    await ref.read(branchDataSourcesProvider.notifier).refresh();
+  }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.watch(salesRepositoryProvider);
-    final today = DateTime.now();
-
-    return FutureBuilder<double>(
-      future: () async {
-        var total = 0.0;
-        for (final b in branches) {
-          total += await repo.getDailySales(branchId: b.id, date: today);
-        }
-        return total;
-      }(),
-      builder: (context, snapshot) {
-        final value = snapshot.hasData
-            ? NumberFormat.currency(locale: 'tr_TR', symbol: '₺')
-                .format(snapshot.data)
-            : '...';
-        return _KpiCard(
-          title: 'Bugün Toplam Ciro',
-          value: value,
-          icon: Icons.trending_up,
-          color: Colors.blue,
-          onTap: null,
+  Future<CashReconciliation> _ensureReconciliation(Branch branch) async {
+    final session = ref.read(authControllerProvider).asData?.value;
+    if (session == null) throw StateError('Oturum bulunamadı');
+    final existing = ref.read(reconciliationsProvider).where((r) {
+      return r.branchId == branch.id &&
+          _sameDay(_dayOnly(r.date), _businessDate);
+    }).firstOrNull;
+    if (existing != null) return existing;
+    return ref
+        .read(reconciliationsProvider.notifier)
+        .createDraft(
+          branchId: branch.id,
+          date: _businessDate,
+          userId: session.userId,
         );
-      },
-    );
   }
-}
 
-class _PosPullStatusCard extends ConsumerWidget {
-  const _PosPullStatusCard({required this.branches});
-
-  final List<Branch> branches;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(posPullStatusesProvider);
-    final dt = DateFormat('yyyy-MM-dd HH:mm', 'tr_TR');
-    final d = DateFormat('yyyy-MM-dd', 'tr_TR');
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Text('POS Son Çekim', style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                FilledButton.tonal(
-                  onPressed: () => ref.invalidate(posPullStatusesProvider),
-                  child: const Text('Yenile'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            async.when(
-              data: (items) {
-                if (items.isEmpty) {
-                  return const Text('Kayıt bulunamadı.');
-                }
-                final byId = {for (final x in items) x.branchId: x};
-                return Column(
-                  children: [
-                    for (final b in branches)
-                      Builder(
-                        builder: (context) {
-                          final s = byId[b.id];
-                          final lastPulledAt = s?.lastPulledAt;
-                          final lastBusinessDate = s?.lastBusinessDate;
-                          final subtitleParts = <String>[];
-                          if (lastBusinessDate != null) subtitleParts.add('Tarih: ${d.format(lastBusinessDate)}');
-                          subtitleParts.add(
-                            lastPulledAt == null ? 'Son çekim: -' : 'Son çekim: ${dt.format(lastPulledAt.toLocal())}',
-                          );
-                          return ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(b.name),
-                            subtitle: Text(subtitleParts.join(' • ')),
-                          );
-                        },
-                      ),
-                  ],
-                );
-              },
-              loading: () => const Text('Yükleniyor...'),
-              error: (e, _) => Text('Son çekim bilgisi alınamadı: $e'),
-            ),
-          ],
+  Future<void> _syncBranch(Branch branch) async {
+    if (!AppConfig.hasApi) return;
+    if (_syncingBranchId.isNotEmpty) return;
+    setState(() => _syncingBranchId = branch.id);
+    final dayStr = DateFormat('yyyy-MM-dd', 'tr_TR').format(_businessDate);
+    try {
+      final rec = await _ensureReconciliation(branch);
+      final dio = ref.read(dioProvider);
+      final pullRes = await dio.post<Map<String, dynamic>>(
+        '/pos/pull/branch-daily',
+        data: {
+          'branchId': branch.id,
+          'businessDate': dayStr,
+          'businessDayStartHour': branch.businessDayStartHour,
+          'summaryOnly': true,
+        },
+      );
+      final totalSales = _numToDouble(pullRes.data?['dailyTotal']);
+      await ref
+          .read(reconciliationsProvider.notifier)
+          .updateExpectedSalesTotal(
+            id: rec.id,
+            expectedSalesTotal: totalSales,
+          );
+      ref.invalidate(posPullStatusesProvider);
+      await ref.read(reconciliationsProvider.notifier).refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${branch.name} satışları çekildi ve icmal güncellendi.',
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${branch.name} aktarımı başarısız: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _syncingBranchId = '');
+    }
+  }
+
+  Future<void> _createOrOpen(_CloseRow row) async {
+    try {
+      final rec = row.reconciliation ?? await _ensureReconciliation(row.branch);
+      if (!mounted) return;
+      context.go('/reconciliations/${rec.id}');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('İcmal açılamadı: $e')));
+    }
+  }
+
+  Future<void> _approve(CashReconciliation rec) async {
+    setState(() => _approvingId = rec.id);
+    try {
+      await ref.read(reconciliationsProvider.notifier).approve(rec.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('İcmal onaylandı.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Onaylanamadı: $e')));
+    } finally {
+      if (mounted) setState(() => _approvingId = '');
+    }
+  }
+
+  double _numToDouble(dynamic raw) {
+    if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw) ?? 0;
+    return 0;
   }
 }
 
-class _ReconciliationTile extends ConsumerWidget {
-  const _ReconciliationTile({required this.item});
+class _CloseRow {
+  const _CloseRow({
+    required this.branch,
+    required this.dataSource,
+    required this.posStatus,
+    required this.reconciliation,
+  });
 
-  final CashReconciliation item;
+  final Branch branch;
+  final BranchDataSource? dataSource;
+  final PosPullStatus? posStatus;
+  final CashReconciliation? reconciliation;
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final branches = ref.watch(branchesProvider);
-    final branchName =
-        branches.firstWhere((b) => b.id == item.branchId, orElse: () => const Branch(id: 'x', name: '?')).name;
-
-    final money = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
-    final date = DateFormat('yyyy-MM-dd', 'tr_TR').format(item.date);
-
-    final diff = item.difference;
-    final hasDiff = diff.abs() > 0.01 && item.status != ReconciliationStatus.draft;
-
-    return ListTile(
-      onTap: () => context.go('/reconciliations/${item.id}'),
-      title: Text('$branchName • $date'),
-      subtitle: Text(
-        '${_statusLabel(item.status)} • Satış: ${money.format(item.expectedSalesTotal)} • Toplam: ${money.format(item.paymentTotal)}',
-      ),
-      trailing: hasDiff
-          ? Chip(
-              label: Text('Fark: ${money.format(diff)}'),
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-            )
-          : null,
-    );
+  bool get hasConnection => dataSource?.isActive == true;
+  bool get posPulledForDate {
+    final d = posStatus?.lastBusinessDate;
+    if (d == null || reconciliation == null) return false;
+    return d.year == reconciliation!.date.year &&
+        d.month == reconciliation!.date.month &&
+        d.day == reconciliation!.date.day;
   }
 
-  String _statusLabel(ReconciliationStatus status) {
-    return switch (status) {
-      ReconciliationStatus.draft => 'Taslak',
-      ReconciliationStatus.submitted => 'Onay Bekliyor',
-      ReconciliationStatus.approved => 'Onaylandı',
-      ReconciliationStatus.rejected => 'Reddedildi',
+  bool get needsAccounting {
+    final rec = reconciliation;
+    if (rec == null) return false;
+    return rec.status == ReconciliationStatus.draft &&
+        rec.expectedSalesTotal.abs() > 0.01 &&
+        rec.paymentTotal.abs() <= 0.01;
+  }
+
+  bool get hasDifference {
+    final rec = reconciliation;
+    if (rec == null || rec.status == ReconciliationStatus.draft) return false;
+    return rec.difference.abs() > 0.01;
+  }
+
+  List<AttachmentKind> get missingDocs {
+    final rec = reconciliation;
+    if (rec == null) return const [];
+    return missingRequiredAttachmentKinds(rec);
+  }
+
+  _CloseState get state {
+    final rec = reconciliation;
+    if (!hasConnection && rec == null) return _CloseState.noConnection;
+    if (rec == null) return _CloseState.missingReconciliation;
+    if (needsAccounting) return _CloseState.needsAccounting;
+    if (missingDocs.isNotEmpty) return _CloseState.missingDocs;
+    if (hasDifference) return _CloseState.hasDifference;
+    return switch (rec.status) {
+      ReconciliationStatus.draft => _CloseState.readyToSubmit,
+      ReconciliationStatus.submitted => _CloseState.waitingApproval,
+      ReconciliationStatus.approved => _CloseState.approved,
+      ReconciliationStatus.rejected => _CloseState.rejected,
     };
   }
 }
 
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({
+enum _CloseState {
+  noConnection,
+  missingReconciliation,
+  needsAccounting,
+  missingDocs,
+  hasDifference,
+  readyToSubmit,
+  waitingApproval,
+  approved,
+  rejected,
+}
+
+class _Toolbar extends StatelessWidget {
+  const _Toolbar({
+    required this.dateLabel,
+    required this.branches,
+    required this.selectedBranchId,
+    required this.onPickDate,
+    required this.onToday,
+    required this.onBranchChanged,
+    required this.onRefresh,
+  });
+
+  final String dateLabel;
+  final List<Branch> branches;
+  final String? selectedBranchId;
+  final VoidCallback onPickDate;
+  final VoidCallback onToday;
+  final ValueChanged<String?>? onBranchChanged;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 210,
+              child: OutlinedButton.icon(
+                onPressed: onPickDate,
+                icon: const Icon(Icons.calendar_today_outlined),
+                label: Text(dateLabel),
+              ),
+            ),
+            OutlinedButton(onPressed: onToday, child: const Text('Bugün')),
+            SizedBox(
+              width: 260,
+              child: DropdownButtonFormField<String?>(
+                initialValue: selectedBranchId,
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Tüm şubeler'),
+                  ),
+                  for (final b in branches)
+                    DropdownMenuItem(value: b.id, child: Text(b.name)),
+                ],
+                onChanged: onBranchChanged,
+                decoration: const InputDecoration(
+                  labelText: 'Şube',
+                  isDense: true,
+                ),
+              ),
+            ),
+            IconButton.outlined(
+              tooltip: 'Yenile',
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.width,
     required this.title,
     required this.value,
     required this.icon,
@@ -672,6 +501,7 @@ class _KpiCard extends StatelessWidget {
     required this.onTap,
   });
 
+  final double width;
   final String title;
   final String value;
   final IconData icon;
@@ -681,33 +511,35 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 320,
+      width: width,
+      height: 96,
       child: Card(
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: color.withValues(alpha: 0.15),
+                  backgroundColor: color.withValues(alpha: 0.12),
                   foregroundColor: color,
                   child: Icon(icon),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(title, style: Theme.of(context).textTheme.labelLarge),
-                      const SizedBox(height: 6),
+                      Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
                       Text(
                         value,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
@@ -721,346 +553,290 @@ class _KpiCard extends StatelessWidget {
   }
 }
 
-class _ChartCard extends StatelessWidget {
-  const _ChartCard({
-    required this.title,
-    required this.subtitle,
-    required this.child,
+class _BranchCloseTile extends StatelessWidget {
+  const _BranchCloseTile({
+    required this.row,
+    required this.role,
+    required this.money,
+    required this.isSyncing,
+    required this.isApproving,
+    required this.onSync,
+    required this.onOpen,
+    required this.onCreateOrOpen,
+    required this.onApprove,
   });
 
-  final String title;
-  final String subtitle;
-  final Widget child;
+  final _CloseRow row;
+  final UserRole role;
+  final NumberFormat money;
+  final bool isSyncing;
+  final bool isApproving;
+  final VoidCallback? onSync;
+  final VoidCallback? onOpen;
+  final VoidCallback onCreateOrOpen;
+  final VoidCallback? onApprove;
 
   @override
   Widget build(BuildContext context) {
+    final rec = row.reconciliation;
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
+    final stateStyle = _stateStyle(row.state, scheme);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 980;
+          final metrics = Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _Metric(
+                label: 'Satış',
+                value: money.format(rec?.expectedSalesTotal ?? 0),
+              ),
+              _Metric(
+                label: 'Ödeme',
+                value: money.format(rec?.paymentTotal ?? 0),
+              ),
+              _Metric(
+                label: 'Fark',
+                value: money.format(rec?.difference ?? 0),
+                highlight: row.hasDifference,
+              ),
+              _Metric(
+                label: 'Evrak',
+                value: row.missingDocs.isEmpty
+                    ? '${rec?.attachmentsCount ?? 0}'
+                    : 'Eksik ${row.missingDocs.length}',
+                highlight: row.missingDocs.isNotEmpty,
+              ),
+            ],
+          );
+
+          final actions = Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: onSync,
+                icon: isSyncing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sync),
+                label: Text(isSyncing ? 'Çekiliyor' : 'Satış Çek'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onCreateOrOpen,
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: Text(rec == null ? 'İcmal Aç' : 'Ödeme Gir'),
+              ),
+              if (onApprove != null)
+                FilledButton.tonalIcon(
+                  onPressed: onApprove,
+                  icon: isApproving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_circle_outline),
+                  label: Text(isApproving ? 'Onaylanıyor' : 'Onayla'),
+                ),
+              if (onOpen != null)
+                IconButton.outlined(
+                  tooltip: 'Detay',
+                  onPressed: onOpen,
+                  icon: const Icon(Icons.open_in_new),
+                ),
+            ],
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    row.hasConnection
+                        ? Icons.cloud_done_outlined
+                        : Icons.cloud_off_outlined,
                   ),
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          row.branch.name,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          row.hasConnection
+                              ? 'POS bağlı${row.posStatus?.lastPulledAt == null ? '' : ' • Son çekim ${DateFormat('dd.MM HH:mm', 'tr_TR').format(row.posStatus!.lastPulledAt!.toLocal())}'}'
+                              : 'POS bağlantısı yok',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _StatePill(label: stateStyle.label, color: stateStyle.color),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (compact) ...[
+                metrics,
+                const SizedBox(height: 10),
+                actions,
+              ] else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: metrics),
+                    actions,
+                  ],
+                ),
+            ],
+          );
+        },
       ),
     );
   }
-}
 
-class _DonutWithLegend extends StatelessWidget {
-  const _DonutWithLegend({
-    required this.segments,
-    this.valueFormatter,
-    this.centerLabel,
-  });
-
-  final List<_DonutSegment> segments;
-  final String Function(double value)? valueFormatter;
-  final String? centerLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = segments.fold<double>(0, (p, e) => p + e.value);
-    final shown = segments.where((e) => e.value > 0.0001).toList();
-    final fmt = valueFormatter ?? (v) => v.toStringAsFixed(0);
-    final label = centerLabel ?? 'Kayıt';
-
-    return LayoutBuilder(
-      builder: (context, c) {
-        final isWide = c.maxWidth >= 520;
-        final donut = SizedBox(
-          width: 220,
-          height: 220,
-          child: _DonutChart(
-            segments: shown,
-            centerText: fmt(total),
-            centerLabel: label,
-          ),
-        );
-
-        final legend = Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          children: [
-            for (final s in shown)
-              _LegendChip(
-                color: s.color,
-                label: '${s.label}: ${fmt(s.value)}',
-              ),
-          ],
-        );
-
-        if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              donut,
-              const SizedBox(width: 16),
-              Expanded(child: legend),
-            ],
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(child: donut),
-            const SizedBox(height: 12),
-            legend,
-          ],
-        );
-      },
-    );
+  ({String label, Color color}) _stateStyle(
+    _CloseState state,
+    ColorScheme scheme,
+  ) {
+    return switch (state) {
+      _CloseState.noConnection => (label: 'Bağlantı yok', color: scheme.error),
+      _CloseState.missingReconciliation => (
+        label: 'İcmal yok',
+        color: Colors.orange.shade800,
+      ),
+      _CloseState.needsAccounting => (
+        label: 'Ödeme bekliyor',
+        color: Colors.blue.shade800,
+      ),
+      _CloseState.missingDocs => (
+        label: 'Evrak eksik',
+        color: Colors.orange.shade900,
+      ),
+      _CloseState.hasDifference => (label: 'Fark var', color: scheme.error),
+      _CloseState.readyToSubmit => (
+        label: 'Kontrol edilecek',
+        color: Colors.teal.shade700,
+      ),
+      _CloseState.waitingApproval => (
+        label: 'Onay bekliyor',
+        color: Colors.purple.shade700,
+      ),
+      _CloseState.approved => (
+        label: 'Onaylandı',
+        color: Colors.green.shade700,
+      ),
+      _CloseState.rejected => (label: 'Reddedildi', color: scheme.error),
+    };
   }
 }
 
-class _LegendChip extends StatelessWidget {
-  const _LegendChip({required this.color, required this.label});
+class _Metric extends StatelessWidget {
+  const _Metric({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
 
-  final Color color;
   final String label;
+  final String value;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      width: 136,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: highlight ? scheme.error : scheme.outlineVariant,
+        ),
+        color: highlight ? scheme.errorContainer.withValues(alpha: 0.35) : null,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(label),
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 2),
+          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
   }
 }
 
-class _DonutSegment {
-  const _DonutSegment({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+class _StatePill extends StatelessWidget {
+  const _StatePill({required this.label, required this.color});
+
   final String label;
-  final double value;
   final Color color;
-}
-
-class _DonutChart extends StatelessWidget {
-  const _DonutChart({
-    required this.segments,
-    required this.centerText,
-    required this.centerLabel,
-  });
-
-  final List<_DonutSegment> segments;
-  final String centerText;
-  final String centerLabel;
 
   @override
   Widget build(BuildContext context) {
-    final total = segments.fold<double>(0, (p, e) => p + e.value);
-    final scheme = Theme.of(context).colorScheme;
-    return CustomPaint(
-      painter: _DonutPainter(
-        segments: segments,
-        total: total,
-        trackColor: scheme.surfaceContainerHighest,
-      ),
-      child: Center(
+    return Chip(
+      label: Text(label),
+      visualDensity: VisualDensity.compact,
+      backgroundColor: color.withValues(alpha: 0.12),
+      labelStyle: TextStyle(color: color, fontWeight: FontWeight.w600),
+    );
+  }
+}
+
+class _ApprovalFocusCard extends StatelessWidget {
+  const _ApprovalFocusCard({
+    required this.rows,
+    required this.money,
+    required this.onOpen,
+  });
+
+  final List<_CloseRow> rows;
+  final NumberFormat money;
+  final ValueChanged<String> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              centerText,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              'Onay Odak Listesi',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            Text(
-              centerLabel,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-            ),
+            const SizedBox(height: 8),
+            for (final row in rows)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(row.branch.name),
+                subtitle: Text(
+                  'Satış ${money.format(row.reconciliation!.expectedSalesTotal)} • Ödeme ${money.format(row.reconciliation!.paymentTotal)} • Fark ${money.format(row.reconciliation!.difference)}',
+                ),
+                trailing: IconButton(
+                  tooltip: 'İncele',
+                  onPressed: () => onOpen(row.reconciliation!.id),
+                  icon: const Icon(Icons.open_in_new),
+                ),
+              ),
           ],
         ),
       ),
     );
-  }
-}
-
-class _DonutPainter extends CustomPainter {
-  _DonutPainter({
-    required this.segments,
-    required this.total,
-    required this.trackColor,
-  });
-
-  final List<_DonutSegment> segments;
-  final double total;
-  final Color trackColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 8;
-    final stroke = math.max(10.0, radius * 0.22);
-    final rect = Rect.fromCircle(center: center, radius: radius);
-
-    final track = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, -math.pi / 2, math.pi * 2, false, track);
-
-    if (total <= 0.0001) return;
-    var start = -math.pi / 2;
-    for (final s in segments) {
-      final sweep = (s.value / total) * math.pi * 2;
-      if (sweep <= 0) continue;
-      final p = Paint()
-        ..color = s.color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round;
-      canvas.drawArc(rect, start, sweep, false, p);
-      start += sweep;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DonutPainter oldDelegate) {
-    return oldDelegate.total != total ||
-        oldDelegate.segments != segments ||
-        oldDelegate.trackColor != trackColor;
-  }
-}
-
-class _BarPoint {
-  const _BarPoint({required this.date, required this.value});
-  final DateTime date;
-  final double value;
-}
-
-class _BarChart extends StatelessWidget {
-  const _BarChart({required this.series});
-
-  final List<_BarPoint> series;
-
-  @override
-  Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
-    final maxValue = series.fold<double>(0, (p, e) => math.max(p, e.value));
-
-    return SizedBox(
-      height: 260,
-      child: CustomPaint(
-        painter: _BarChartPainter(
-          series: series,
-          maxValue: maxValue <= 0 ? 1 : maxValue,
-          barColor: Theme.of(context).colorScheme.primary,
-          gridColor: Theme.of(context).colorScheme.outlineVariant,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Align(
-            alignment: Alignment.topRight,
-            child: Chip(
-              label: Text('Max: ${money.format(maxValue)}'),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BarChartPainter extends CustomPainter {
-  _BarChartPainter({
-    required this.series,
-    required this.maxValue,
-    required this.barColor,
-    required this.gridColor,
-  });
-
-  final List<_BarPoint> series;
-  final double maxValue;
-  final Color barColor;
-  final Color gridColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final left = 8.0;
-    final top = 8.0;
-    final right = size.width - 8.0;
-    final bottom = size.height - 8.0;
-    final width = right - left;
-    final height = bottom - top;
-
-    final gridPaint = Paint()
-      ..color = gridColor.withValues(alpha: 0.6)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    for (var i = 1; i <= 3; i++) {
-      final y = top + (height * i / 4);
-      canvas.drawLine(Offset(left, y), Offset(right, y), gridPaint);
-    }
-
-    if (series.isEmpty) return;
-    final barCount = series.length;
-    final gap = 4.0;
-    final barWidth = (width - gap * (barCount - 1)) / barCount;
-
-    for (var i = 0; i < barCount; i++) {
-      final v = series[i].value;
-      final h = (v / maxValue) * height;
-      final x = left + i * (barWidth + gap);
-      final y = bottom - h;
-
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, y, barWidth, h),
-        const Radius.circular(6),
-      );
-
-      final fill = Paint()
-        ..color = barColor.withValues(alpha: 0.85)
-        ..style = PaintingStyle.fill;
-      canvas.drawRRect(rect, fill);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _BarChartPainter oldDelegate) {
-    return oldDelegate.series != series ||
-        oldDelegate.maxValue != maxValue ||
-        oldDelegate.barColor != barColor ||
-        oldDelegate.gridColor != gridColor;
   }
 }

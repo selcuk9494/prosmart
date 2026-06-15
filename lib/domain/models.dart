@@ -1,17 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-enum ReconciliationStatus {
-  draft,
-  submitted,
-  approved,
-  rejected,
-}
+enum ReconciliationStatus { draft, submitted, approved, rejected }
 
-enum AttachmentKind {
-  countSlip,
-  signedStatement,
-  other,
-}
+enum AttachmentKind { countSlip, signedStatement, other }
 
 @immutable
 class Branch {
@@ -105,7 +96,12 @@ class PaymentType {
   final String name;
   final bool isActive;
 
-  PaymentType copyWith({String? id, String? code, String? name, bool? isActive}) {
+  PaymentType copyWith({
+    String? id,
+    String? code,
+    String? name,
+    bool? isActive,
+  }) {
     return PaymentType(
       id: id ?? this.id,
       code: code ?? this.code,
@@ -117,7 +113,11 @@ class PaymentType {
 
 @immutable
 class ExpenseType {
-  const ExpenseType({required this.id, required this.name, this.isActive = true});
+  const ExpenseType({
+    required this.id,
+    required this.name,
+    this.isActive = true,
+  });
 
   final String id;
   final String name;
@@ -262,12 +262,7 @@ class UnitSet {
   final String name;
   final bool isActive;
 
-  UnitSet copyWith({
-    String? id,
-    String? code,
-    String? name,
-    bool? isActive,
-  }) {
+  UnitSet copyWith({String? id, String? code, String? name, bool? isActive}) {
     return UnitSet(
       id: id ?? this.id,
       code: code ?? this.code,
@@ -583,8 +578,7 @@ class CashReconciliation {
     return paymentTotalCached ?? 0;
   }
 
-  double get expenseTotal =>
-      expenseLines.fold(0, (prev, e) => prev + e.amount);
+  double get expenseTotal => expenseLines.fold(0, (prev, e) => prev + e.amount);
 
   double get difference => paymentTotal - expectedSalesTotal;
 
@@ -627,11 +621,14 @@ class CashReconciliation {
       approvedByUserId: approvedByUserId ?? this.approvedByUserId,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       paymentTotalCached: paymentTotalCached ?? this.paymentTotalCached,
-      attachmentsCountCached: attachmentsCountCached ?? this.attachmentsCountCached,
+      attachmentsCountCached:
+          attachmentsCountCached ?? this.attachmentsCountCached,
       ocrCardTotalCached: ocrCardTotalCached ?? this.ocrCardTotalCached,
       ocrFastTotalCached: ocrFastTotalCached ?? this.ocrFastTotalCached,
-      hasEndOfDayReportCached: hasEndOfDayReportCached ?? this.hasEndOfDayReportCached,
-      manualCardTotalCached: manualCardTotalCached ?? this.manualCardTotalCached,
+      hasEndOfDayReportCached:
+          hasEndOfDayReportCached ?? this.hasEndOfDayReportCached,
+      manualCardTotalCached:
+          manualCardTotalCached ?? this.manualCardTotalCached,
     );
   }
 }
@@ -784,6 +781,23 @@ class InventoryInvoiceLine {
   final String? productCode;
   final String? productName;
   final String? unit;
+}
+
+@immutable
+class InventoryInvoiceStockPost {
+  const InventoryInvoiceStockPost({
+    required this.transactionId,
+    required this.warehouseId,
+    required this.linesCount,
+    this.warehouseName,
+    this.createdAt,
+  });
+
+  final String transactionId;
+  final String warehouseId;
+  final int linesCount;
+  final String? warehouseName;
+  final DateTime? createdAt;
 }
 
 @immutable

@@ -941,6 +941,7 @@ class _ReconciliationDetailPageState
                                       'branchId': item.branchId,
                                       'businessDate': day,
                                       'businessDayStartHour': businessDayStartHour,
+                                      'summaryOnly': true,
                                     },
                                   );
 

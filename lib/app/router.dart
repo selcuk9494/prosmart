@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +7,7 @@ import '../features/auth/auth_models.dart';
 import '../features/auth/login_page.dart';
 import '../features/dashboard/dashboard_page.dart';
 import '../features/documents/document_upload_page.dart';
+import '../features/finance/managed_finance_page.dart';
 import '../features/crm/crm_firms_page.dart';
 import '../features/crm/crm_income_centers_page.dart';
 import '../features/crm/crm_expense_types_page.dart';
@@ -30,6 +31,8 @@ import '../features/inventory/inventory_products_page.dart';
 import '../features/inventory/inventory_recipes_page.dart';
 import '../features/inventory/inventory_transactions_page.dart';
 import '../features/inventory/inventory_warehouses_page.dart';
+import '../features/mobile/mobile_document_capture_page.dart';
+import '../features/operations/branch_operations_page.dart';
 import '../features/reconciliation/reconciliation_detail_page.dart';
 import '../features/reconciliation/reconciliation_list_page.dart';
 import '../features/settings/settings_page.dart';
@@ -40,11 +43,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
-    initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       final isLoggingIn = state.matchedLocation == '/login';
+
+      if (auth.isLoading && !auth.hasValue) {
+        return null;
+      }
 
       final session = auth.asData?.value;
       final isAuthed = session != null;
@@ -55,6 +61,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (isLoggingIn) {
         return '/';
+      }
+
+      final isMobileApp =
+          !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.iOS ||
+              defaultTargetPlatform == TargetPlatform.android);
+      if (isMobileApp && state.matchedLocation == '/') {
+        return '/mobile/documents';
       }
 
       if (state.matchedLocation == '/settings' &&
@@ -70,10 +84,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
@@ -96,6 +107,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/documents',
             builder: (context, state) => const DocumentUploadPage(),
+          ),
+          GoRoute(
+            path: '/mobile/documents',
+            builder: (context, state) => const MobileDocumentCapturePage(),
+          ),
+          GoRoute(
+            path: '/operations/branches',
+            builder: (context, state) => const BranchOperationsPage(),
           ),
           GoRoute(
             path: '/settings',
@@ -159,13 +178,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'new',
-                builder: (context, state) => const CrmFirmDetailPage(firmId: 'new'),
+                builder: (context, state) =>
+                    const CrmFirmDetailPage(firmId: 'new'),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) => CrmFirmDetailPage(
-                  firmId: state.pathParameters['id']!,
-                ),
+                builder: (context, state) =>
+                    CrmFirmDetailPage(firmId: state.pathParameters['id']!),
               ),
             ],
           ),
@@ -231,9 +250,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/legacy/:ref',
-            builder: (context, state) => _LegacyPage(
-              legacyRef: state.pathParameters['ref']!,
-            ),
+            builder: (context, state) =>
+                ManagedFinancePage(legacyRef: state.pathParameters['ref']!),
           ),
         ],
       ),
@@ -255,44 +273,5 @@ class _RouterRefreshNotifier extends ChangeNotifier {
   void dispose() {
     _sub.close();
     super.dispose();
-  }
-}
-
-class _LegacyPage extends StatelessWidget {
-  const _LegacyPage({required this.legacyRef});
-
-  final String legacyRef;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    legacyRef,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Bu ekran NBOS (ASPX) sistemindeki menüden geldi. Flutter tarafında birebirini bu ref üzerinden modül modül taşıyacağız.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

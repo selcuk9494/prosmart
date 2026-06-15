@@ -50,10 +50,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
 
           final res = await dio.post<Map<String, dynamic>>(
             '/auth/login',
-            data: {
-              'username': username,
-              'password': password,
-            },
+            data: {'username': username, 'password': password},
           );
 
           final data = res.data;
@@ -70,8 +67,8 @@ class AuthController extends AsyncNotifier<AuthSession?> {
           final session = AuthSession(
             accessToken: token,
             userId: (data['userId'] ?? data['id'] ?? username).toString(),
-            displayName:
-                (data['displayName'] ?? data['name'] ?? username).toString(),
+            displayName: (data['displayName'] ?? data['name'] ?? username)
+                .toString(),
             role: role,
             branchId: data['branchId']?.toString(),
           );
@@ -79,7 +76,17 @@ class AuthController extends AsyncNotifier<AuthSession?> {
           await _persistSession(session);
           return session;
         } on DioException catch (e) {
-          final base = AppConfig.apiBaseUrl.trim().isEmpty ? '(same-origin)' : AppConfig.apiBaseUrl.trim();
+          final status = e.response?.statusCode;
+          if (status == 401) {
+            throw StateError('Kullanıcı adı veya şifre hatalı.');
+          }
+          final data = e.response?.data;
+          if (data is Map && data['error'] != null) {
+            throw StateError('Giriş yapılamadı: ${data['error']}');
+          }
+          final base = AppConfig.apiBaseUrl.trim().isEmpty
+              ? '(same-origin)'
+              : AppConfig.apiBaseUrl.trim();
           throw StateError(
             'API bağlantı hatası: $base\n'
             'Detay: ${e.message ?? e.type.name}\n'
@@ -94,9 +101,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     });
   }
 
-  Future<void> loginDemo({
-    required String username,
-  }) async {
+  Future<void> loginDemo({required String username}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final session = _buildDemoSession(username);

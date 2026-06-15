@@ -37,8 +37,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     final allowedRefsLower = isManager
         ? const <String>{}
         : (permissionsAsync.asData?.value ?? const [])
-            .map((e) => e.toLowerCase())
-            .toSet();
+              .map((e) => e.toLowerCase())
+              .toSet();
 
     final pendingApprovals = ref.watch(pendingApprovalsCountProvider);
     final mismatches = ref.watch(mismatchesCountProvider);
@@ -49,11 +49,11 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final allSections = [
       ..._buildMenu(
-      role: role,
-      pendingApprovals: pendingApprovals,
-      mismatches: mismatches,
-      isManager: isManager,
-      allowedRefsLower: allowedRefsLower,
+        role: role,
+        pendingApprovals: pendingApprovals,
+        mismatches: mismatches,
+        isManager: isManager,
+        allowedRefsLower: allowedRefsLower,
       ),
       ..._buildCrmMenuSections(crmMenu),
     ];
@@ -91,8 +91,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                 child: Text(
                   headerSubtitle!,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).appBarTheme.foregroundColor,
-                      ),
+                    color: Theme.of(context).appBarTheme.foregroundColor,
+                  ),
                 ),
               ),
             ),
@@ -153,7 +153,8 @@ class _AppShellState extends ConsumerState<AppShell> {
       final children = item.children == null
           ? null
           : _filterItems(item.children!, query);
-      final matches = item.title.toLowerCase().contains(query) ||
+      final matches =
+          item.title.toLowerCase().contains(query) ||
           (item.subtitle?.toLowerCase().contains(query) ?? false);
       if (matches || (children != null && children.isNotEmpty)) {
         filtered.add(item.copyWith(children: children));
@@ -171,9 +172,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           for (final s in sections)
             _MenuSection(
               title: s.title,
-              items: [
-                for (final n in s.nodes) _fromCrmNode(n),
-              ],
+              items: [for (final n in s.nodes) _fromCrmNode(n)],
             ),
         ];
       },
@@ -231,20 +230,25 @@ class _AppShellState extends ConsumerState<AppShell> {
     required Set<String> allowedRefsLower,
   }) {
     final canManage = role == UserRole.manager;
-    final canEditDefinitions = role == UserRole.manager || role == UserRole.accounting;
-    bool _allowed(String? ref) {
+    final canEditDefinitions =
+        role == UserRole.manager || role == UserRole.accounting;
+    bool allowed(String? ref) {
       if (isManager) return true;
       final r = (ref ?? '').trim().toLowerCase();
       if (r.isEmpty) return true;
       return allowedRefsLower.contains(r);
     }
 
-    List<_MenuItem> _filterByPermission(List<_MenuItem> items) {
+    List<_MenuItem> filterByPermission(List<_MenuItem> items) {
       final out = <_MenuItem>[];
       for (final item in items) {
-        final filteredChildren = item.children == null ? null : _filterByPermission(item.children!);
-        final includeSelf = _allowed(item.permissionRef);
-        final include = includeSelf || (filteredChildren != null && filteredChildren.isNotEmpty);
+        final filteredChildren = item.children == null
+            ? null
+            : filterByPermission(item.children!);
+        final includeSelf = allowed(item.permissionRef);
+        final include =
+            includeSelf ||
+            (filteredChildren != null && filteredChildren.isNotEmpty);
         if (!include) continue;
         out.add(item.copyWith(children: filteredChildren));
       }
@@ -272,10 +276,24 @@ class _AppShellState extends ConsumerState<AppShell> {
             permissionRef: 'ps_reconciliations',
           ),
           const _MenuItem(
+            title: 'Şube Operasyonları',
+            subtitle: 'POS, kasa, stok, maliyet',
+            icon: Icons.hub_outlined,
+            route: '/operations/branches',
+            permissionRef: 'ps_branch_operations',
+          ),
+          const _MenuItem(
             title: 'Evrak',
             subtitle: 'Eksik evrak takibi',
             icon: Icons.upload_file_outlined,
             route: '/documents',
+            permissionRef: 'ps_documents',
+          ),
+          const _MenuItem(
+            title: 'Mobil Evrak',
+            subtitle: 'Kameradan icmal belgesi',
+            icon: Icons.document_scanner_outlined,
+            route: '/mobile/documents',
             permissionRef: 'ps_documents',
           ),
           _MenuItem(
@@ -284,7 +302,9 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icons.verified_outlined,
             route: '/reconciliations?status=submitted',
             enabled: canManage,
-            badgeCount: canManage && pendingApprovals > 0 ? pendingApprovals : null,
+            badgeCount: canManage && pendingApprovals > 0
+                ? pendingApprovals
+                : null,
             badgeTone: _BadgeTone.danger,
             permissionRef: 'ps_pending_approvals',
           ),
@@ -444,7 +464,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             title: 'Maliyet Analizi',
             subtitle: 'Food cost / rapor',
             icon: Icons.analytics_outlined,
-            enabled: false,
+            route: '/legacy/ps_cost_analysis',
             permissionRef: 'ps_cost_analysis',
           ),
         ],
@@ -463,14 +483,14 @@ class _AppShellState extends ConsumerState<AppShell> {
             title: 'Kasa Raporları',
             subtitle: 'PDF/Excel çıktılar',
             icon: Icons.summarize_outlined,
-            enabled: false,
+            route: '/legacy/ps_cash_reports',
             permissionRef: 'ps_cash_reports',
           ),
           _MenuItem(
             title: 'Stok Raporları',
             subtitle: 'Giriş/çıkış',
             icon: Icons.query_stats_outlined,
-            enabled: false,
+            route: '/legacy/ps_stock_reports',
             permissionRef: 'ps_stock_reports',
           ),
         ],
@@ -517,8 +537,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     ];
 
     return [
-      for (final s in sections)
-        s.copyWith(items: _filterByPermission(s.items)),
+      for (final s in sections) s.copyWith(items: filterByPermission(s.items)),
     ].where((s) => s.items.isNotEmpty).toList();
   }
 
@@ -707,15 +726,9 @@ class _MenuNodeTile extends StatelessWidget {
     final badgeCount = item.badgeCount ?? 0;
     final badge = badgeCount <= 0
         ? null
-        : _Badge(
-            count: badgeCount,
-            tone: item.badgeTone ?? _BadgeTone.neutral,
-          );
+        : _Badge(count: badgeCount, tone: item.badgeTone ?? _BadgeTone.neutral);
 
-    final contentPadding = EdgeInsets.only(
-      left: 16 + (depth * 12),
-      right: 16,
-    );
+    final contentPadding = EdgeInsets.only(left: 16 + (depth * 12), right: 16);
 
     if (hasChildren) {
       return ExpansionTile(
@@ -764,7 +777,8 @@ class _MenuNodeTile extends StatelessWidget {
 
   bool _matches(String location, String route) {
     if (location == route) return true;
-    if (route == '/reconciliations' && location.startsWith('/reconciliations')) {
+    if (route == '/reconciliations' &&
+        location.startsWith('/reconciliations')) {
       return true;
     }
     if (route.startsWith('/legacy/') && location == route) {
@@ -785,7 +799,10 @@ class _Badge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final (bg, fg) = switch (tone) {
       _BadgeTone.neutral => (scheme.surfaceContainerHighest, scheme.onSurface),
-      _BadgeTone.warning => (scheme.tertiaryContainer, scheme.onTertiaryContainer),
+      _BadgeTone.warning => (
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
+      ),
       _BadgeTone.danger => (scheme.error, scheme.onError),
     };
 

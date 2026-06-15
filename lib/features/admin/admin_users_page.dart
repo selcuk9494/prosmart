@@ -22,7 +22,10 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
       children: [
         Row(
           children: [
-            Text('Kullanıcı Tanımlama', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Kullanıcı Tanımlama',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const Spacer(),
             FilledButton(
               onPressed: () => _openCreateDialog(context),
@@ -55,7 +58,9 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                         for (var i = 0; i < items.length; i++)
                           DataRow(
                             color: WidgetStatePropertyAll(
-                              i.isEven ? const Color(0xFFFFFFFF) : const Color(0xFFF4F4F4),
+                              i.isEven
+                                  ? const Color(0xFFFFFFFF)
+                                  : const Color(0xFFF4F4F4),
                             ),
                             cells: [
                               DataCell(Text(items[i].username)),
@@ -64,16 +69,17 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                               DataCell(
                                 Switch(
                                   value: items[i].isActive,
-                                  onChanged: (_) => ref.read(usersProvider.notifier).toggleActive(
-                                        items[i].id,
-                                      ),
+                                  onChanged: (_) => ref
+                                      .read(usersProvider.notifier)
+                                      .toggleActive(items[i].id),
                                 ),
                               ),
                               DataCell(
                                 Row(
                                   children: [
                                     OutlinedButton(
-                                      onPressed: () => _openEditDialog(context, items[i]),
+                                      onPressed: () =>
+                                          _openEditDialog(context, items[i]),
                                       child: const Text('Düzenle'),
                                     ),
                                   ],
@@ -109,7 +115,9 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                 children: [
                   TextField(
                     controller: usernameController,
-                    decoration: const InputDecoration(labelText: 'Kullanıcı Adı'),
+                    decoration: const InputDecoration(
+                      labelText: 'Kullanıcı Adı',
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -120,9 +128,18 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                   DropdownButtonFormField<String>(
                     initialValue: role,
                     items: const [
-                      DropdownMenuItem(value: 'manager', child: Text('Yönetici')),
-                      DropdownMenuItem(value: 'accounting', child: Text('Muhasebe')),
-                      DropdownMenuItem(value: 'branchUser', child: Text('Şube')),
+                      DropdownMenuItem(
+                        value: 'manager',
+                        child: Text('Yönetici'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'accounting',
+                        child: Text('Muhasebe'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'branchUser',
+                        child: Text('Şube'),
+                      ),
                     ],
                     onChanged: (v) => role = v ?? role,
                     decoration: const InputDecoration(labelText: 'Rol'),
@@ -131,7 +148,9 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                   TextField(
                     controller: passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Şifre (boş olabilir)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Şifre (boş olabilir)',
+                    ),
                   ),
                 ],
               ),
@@ -157,16 +176,18 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
       final password = passwordController.text;
       if (username.isEmpty || displayName.isEmpty) return;
 
-      await ref.read(usersProvider.notifier).addUser(
+      await ref
+          .read(usersProvider.notifier)
+          .addUser(
             username: username,
             displayName: displayName,
             role: role,
             password: password,
           );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kaydedildi.')),
-        );
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Kaydedildi.')));
       }
     } finally {
       usernameController.dispose();
@@ -196,15 +217,26 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                     children: [
                       TextField(
                         controller: displayNameController,
-                        decoration: const InputDecoration(labelText: 'Ad Soyad'),
+                        decoration: const InputDecoration(
+                          labelText: 'Ad Soyad',
+                        ),
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         initialValue: role,
                         items: const [
-                          DropdownMenuItem(value: 'manager', child: Text('Yönetici')),
-                          DropdownMenuItem(value: 'accounting', child: Text('Muhasebe')),
-                          DropdownMenuItem(value: 'branchUser', child: Text('Şube')),
+                          DropdownMenuItem(
+                            value: 'manager',
+                            child: Text('Yönetici'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'accounting',
+                            child: Text('Muhasebe'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'branchUser',
+                            child: Text('Şube'),
+                          ),
                         ],
                         onChanged: (v) => role = v ?? role,
                         decoration: const InputDecoration(labelText: 'Rol'),
@@ -253,16 +285,20 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
       final displayName = displayNameController.text.trim();
       final password = passwordController.text;
 
-      await ref.read(usersProvider.notifier).updateUser(
+      await ref
+          .read(usersProvider.notifier)
+          .updateUser(
             user.id,
             displayName: displayName.isEmpty ? null : displayName,
             role: role,
-            password: removePassword ? '' : (password.isEmpty ? null : password),
+            password: removePassword
+                ? ''
+                : (password.isEmpty ? null : password),
           );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Güncellendi.')),
-        );
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Güncellendi.')));
       }
     } finally {
       displayNameController.dispose();

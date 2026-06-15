@@ -990,8 +990,14 @@ app.put(
   }),
 );
 
+const DEFAULT_BRANCH_DB_PASSWORD = 'KORDO';
+
+function defaultBranchDbPassword() {
+  return (process.env.DEFAULT_BRANCH_DB_PASSWORD ?? DEFAULT_BRANCH_DB_PASSWORD).toString();
+}
+
 function integrationSecretOrNull() {
-  const v = (process.env.INTEGRATION_SECRET ?? '').toString().trim();
+  const v = (process.env.INTEGRATION_SECRET ?? defaultBranchDbPassword()).toString().trim();
   return v || null;
 }
 
@@ -1480,22 +1486,43 @@ async function getBranchDataSourceConfig(branchId) {
     e.code = 'INTEGRATION_SECRET_REQUIRED';
     throw e;
   }
-  const row = await queryOne(
-    `
-    select
-      db_host as host,
-      db_port as port,
-      db_name as "database",
-      db_user as username,
-      pgp_sym_decrypt(db_password_enc, $2::text)::text as password,
-      db_ssl as ssl,
-      is_active as "isActive"
-    from branch_data_sources
-    where branch_id = $1::uuid
-    limit 1
-    `,
-    [branchId, secret],
-  );
+  let row;
+  try {
+    row = await queryOne(
+      `
+      select
+        db_host as host,
+        db_port as port,
+        db_name as "database",
+        db_user as username,
+        coalesce(pgp_sym_decrypt(db_password_enc, $2::text)::text, $3::text) as password,
+        db_ssl as ssl,
+        is_active as "isActive"
+      from branch_data_sources
+      where branch_id = $1::uuid
+      limit 1
+      `,
+      [branchId, secret, defaultBranchDbPassword()],
+    );
+  } catch (e) {
+    if (e?.code !== '39000') throw e;
+    row = await queryOne(
+      `
+      select
+        db_host as host,
+        db_port as port,
+        db_name as "database",
+        db_user as username,
+        $2::text as password,
+        db_ssl as ssl,
+        is_active as "isActive"
+      from branch_data_sources
+      where branch_id = $1::uuid
+      limit 1
+      `,
+      [branchId, defaultBranchDbPassword()],
+    );
+  }
   if (!row) return null;
   return row;
 }
@@ -1543,8 +1570,8 @@ app.put(
     const database = (req.body?.database ?? req.body?.dbName ?? '').toString().trim();
     const username = (req.body?.username ?? req.body?.user ?? '').toString().trim();
     const hasPassword = Object.prototype.hasOwnProperty.call(req.body ?? {}, 'password');
-    const passwordRaw = (req.body?.password ?? '').toString();
-    const password = passwordRaw.length ? passwordRaw : null;
+    const passwordRaw = (req.body?.password ?? '').toString().trim();
+    const password = passwordRaw.length ? passwordRaw : defaultBranchDbPassword();
     const sslRaw = req.body?.ssl;
     const ssl = typeof sslRaw === 'boolean' ? sslRaw : false;
     const isActiveRaw = req.body?.isActive;
@@ -1555,6 +1582,17 @@ app.put(
     if (!Number.isFinite(port) || port <= 0) return res.status(400).json({ error: 'PORT_REQUIRED' });
     if (!database) return res.status(400).json({ error: 'DATABASE_REQUIRED' });
     if (!username) return res.status(400).json({ error: 'USERNAME_REQUIRED' });
+
+    const existing = await queryOne(
+      `
+      select db_password_enc is not null as "hasPassword"
+      from branch_data_sources
+      where branch_id = $1::uuid
+      limit 1
+      `,
+      [branchId],
+    );
+    const shouldWritePassword = hasPassword || !existing?.hasPassword;
 
     await pool.query(
       `
@@ -1588,7 +1626,7 @@ app.put(
         is_active = excluded.is_active,
         updated_at = now()
       `,
-      [branchId, host, port, database, username, hasPassword, password ?? '', secret, ssl, isActive],
+      [branchId, host, port, database, username, shouldWritePassword, password, secret, ssl, isActive],
     );
 
     res.json({ ok: true });
@@ -1743,6 +1781,10 @@ app.post(
     const branchId = (req.body?.branchId ?? '').toString().trim();
     const businessDate = asDateString(req.body?.businessDate ?? req.body?.date);
     const source = (req.body?.source ?? 'pos').toString().trim() || 'pos';
+    const summaryOnly =
+      req.body?.summaryOnly === true ||
+      req.body?.mode === 'summary' ||
+      req.query?.summaryOnly === '1';
     const businessDayStartHourRaw =
       req.body?.businessDayStartHour ?? req.body?.dayStartHour ?? 0;
     let businessDayStartHour = Number.parseInt(
@@ -1768,12 +1810,13 @@ app.post(
       source,
       businessDayStartHour,
       cfg,
+      summaryOnly,
     });
     res.json(out);
   }),
 );
 
-async function pullBranchDailyPos({ branchId, businessDate, source, businessDayStartHour, cfg }) {
+async function pullBranchDailyPos({ branchId, businessDate, source, businessDayStartHour, cfg, summaryOnly = false }) {
   const ssl = cfg.ssl ? { rejectUnauthorized: false } : false;
   const branchPool = new pg.Pool({
     host: cfg.host,
@@ -1899,7 +1942,7 @@ async function pullBranchDailyPos({ branchId, businessDate, source, businessDayS
 
     const kasaNos = assignedKasaNos.length ? assignedKasaNos : (kasaList.length ? kasaList : null);
 
-    if (kasaNos) {
+    if (kasaNos && !summaryOnly) {
       try {
         const r = await branchPool.query(
           `
@@ -2092,22 +2135,24 @@ async function pullBranchDailyPos({ branchId, businessDate, source, businessDayS
       `delete from pos_register_daily_sales where branch_id=$1::uuid and business_date=$2::date and source=$3`,
       [branchId, businessDate, source],
     );
-    await client.query(
-      `delete from pos_register_daily_payments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-      [branchId, businessDate, source],
-    );
-    await client.query(
-      `delete from pos_register_daily_product_sales where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-      [branchId, businessDate, source],
-    );
-    await client.query(
-      `delete from pos_register_daily_adjustments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-      [branchId, businessDate, source],
-    );
-    await client.query(
-      `delete from pos_register_daily_sales_groups where branch_id=$1::uuid and business_date=$2::date and source=$3`,
-      [branchId, businessDate, source],
-    );
+    if (!summaryOnly) {
+      await client.query(
+        `delete from pos_register_daily_payments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+        [branchId, businessDate, source],
+      );
+      await client.query(
+        `delete from pos_register_daily_product_sales where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+        [branchId, businessDate, source],
+      );
+      await client.query(
+        `delete from pos_register_daily_adjustments where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+        [branchId, businessDate, source],
+      );
+      await client.query(
+        `delete from pos_register_daily_sales_groups where branch_id=$1::uuid and business_date=$2::date and source=$3`,
+        [branchId, businessDate, source],
+      );
+    }
 
     let salesUpserts = 0;
     for (const [registerCode, grossTotal] of salesByKasa.entries()) {
@@ -2238,17 +2283,30 @@ async function pullBranchDailyPos({ branchId, businessDate, source, businessDayS
       [branchId, businessDate, source, total],
     );
 
+    const reconciliationUpdate = await client.query(
+      `
+        update cash_reconciliations
+        set expected_sales_total = $3::numeric, updated_at = now()
+        where branch_id = $1::uuid
+          and business_date = $2::date
+          and status in ('draft', 'rejected')
+        `,
+      [branchId, businessDate, total],
+    );
+
     await client.query('commit');
     return {
       ok: true,
       branchId,
       businessDate,
+      summaryOnly,
       salesUpserts,
       paymentUpserts,
       productUpserts,
       adjustmentUpserts,
       groupUpserts,
       dailyTotal: total,
+      reconciliationsUpdated: reconciliationUpdate.rowCount ?? 0,
     };
   } catch (e) {
     await client.query('rollback');
@@ -3659,25 +3717,226 @@ app.get(
     const lines = await queryAll(
       `
       select
-        id,
-        invoice_id as "invoiceId",
-        product_id as "productId",
-        description,
-        coalesce(unit, '') as unit,
-        quantity,
-        unit_price as "unitPrice",
-        (quantity * unit_price)::numeric(14,4) as "lineTotal",
+        l.id,
+        l.invoice_id as "invoiceId",
+        l.product_id as "productId",
+        l.description,
+        coalesce(l.unit, '') as unit,
+        l.quantity,
+        l.unit_price as "unitPrice",
+        (l.quantity * l.unit_price)::numeric(14,4) as "lineTotal",
         p.code as "productCode",
         p.name as "productName"
-      from inv_invoice_lines
-      left join inv_products p on p.id = product_id
-      where invoice_id = $1::uuid
-      order by created_at asc
+      from inv_invoice_lines l
+      left join inv_products p on p.id = l.product_id
+      where l.invoice_id = $1::uuid
+      order by l.created_at asc
       `,
       [id],
     );
 
-    res.json({ header, lines });
+    const stockPost = await queryOne(
+      `
+      select
+        t.id as "transactionId",
+        t.warehouse_id as "warehouseId",
+        w.name as "warehouseName",
+        t.created_at as "createdAt",
+        (
+          select count(*)::int
+          from inv_stock_transaction_lines l
+          where l.transaction_id = t.id
+        ) as "linesCount"
+      from inv_stock_transactions t
+      join inv_warehouses w on w.id = t.warehouse_id
+      where t.kind = 'purchase_invoice' and t.reference_no = $1
+      order by t.created_at desc
+      limit 1
+      `,
+      [`INV:${id}`],
+    );
+
+    res.json({ header, lines, stockPost: stockPost ?? null });
+  }),
+);
+
+app.post(
+  '/inv/invoices/:id/post-to-stock',
+  authRequired,
+  requireAnyRole(['manager', 'accounting']),
+  asyncRoute(async (req, res) => {
+    const id = req.params.id;
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+
+      const invoice = await client.query(
+        `
+        select
+          id,
+          branch_id as "branchId",
+          invoice_no as "invoiceNo",
+          invoice_date as "invoiceDate",
+          vendor_name as "vendorName"
+        from inv_invoices
+        where id = $1::uuid
+        for update
+        `,
+        [id],
+      );
+      const header = invoice.rows[0];
+      if (!header) {
+        await client.query('rollback');
+        return res.status(404).json({ error: 'NOT_FOUND' });
+      }
+      if (!canAccessBranch(req, header.branchId)) {
+        await client.query('rollback');
+        return res.status(403).json({ error: 'FORBIDDEN' });
+      }
+
+      const linesResult = await client.query(
+        `
+        select
+          l.product_id as "productId",
+          l.quantity,
+          l.unit_price as "unitPrice"
+        from inv_invoice_lines l
+        join inv_products p on p.id = l.product_id
+        where l.invoice_id = $1::uuid and l.product_id is not null and l.quantity <> 0
+        order by l.created_at asc
+        `,
+        [id],
+      );
+      const lines = linesResult.rows
+        .map((l) => ({
+          productId: l.productId,
+          quantity: toQty(l.quantity),
+          unitCost: toMoney(l.unitPrice) ?? 0,
+        }))
+        .filter((l) => l.productId && l.quantity != null);
+
+      if (lines.length === 0) {
+        await client.query('rollback');
+        return res.status(400).json({ error: 'PRODUCT_LINES_REQUIRED' });
+      }
+
+      let warehouse = await client.query(
+        `
+        select w.id
+        from branch_waste_warehouse bww
+        join inv_warehouses w on w.id = bww.warehouse_id
+        where bww.branch_id = $1::uuid and w.branch_id = $1::uuid and w.is_active = true
+        limit 1
+        `,
+        [header.branchId],
+      );
+
+      if (warehouse.rowCount === 0) {
+        warehouse = await client.query(
+          `
+          select id
+          from inv_warehouses
+          where branch_id = $1::uuid and is_active = true
+          order by created_at asc
+          limit 1
+          `,
+          [header.branchId],
+        );
+      }
+
+      let warehouseId = warehouse.rows[0]?.id;
+      if (!warehouseId) {
+        const createdWarehouse = await client.query(
+          `
+          insert into inv_warehouses(branch_id, code, name, is_active)
+          values ($1::uuid, 'MAIN', 'Ana Depo', true)
+          on conflict (branch_id, code) do update set
+            name = excluded.name,
+            is_active = true,
+            updated_at = now()
+          returning id
+          `,
+          [header.branchId],
+        );
+        warehouseId = createdWarehouse.rows[0].id;
+      }
+
+      const referenceNo = `INV:${id}`;
+      const existingTx = await client.query(
+        `
+        select id
+        from inv_stock_transactions
+        where branch_id = $1::uuid and kind = 'purchase_invoice' and reference_no = $2
+        order by created_at desc
+        limit 1
+        `,
+        [header.branchId, referenceNo],
+      );
+
+      let transactionId = existingTx.rows[0]?.id;
+      if (transactionId) {
+        await client.query(`delete from inv_stock_transaction_lines where transaction_id = $1::uuid`, [transactionId]);
+        await client.query(
+          `
+          update inv_stock_transactions
+          set
+            warehouse_id = $2::uuid,
+            business_date = $3::date,
+            notes = $4
+          where id = $1::uuid
+          `,
+          [
+            transactionId,
+            warehouseId,
+            header.invoiceDate,
+            `Alım faturası ${header.invoiceNo}${header.vendorName ? ` - ${header.vendorName}` : ''}`,
+          ],
+        );
+      } else {
+        const createdTx = await client.query(
+          `
+          insert into inv_stock_transactions(
+            branch_id, warehouse_id, business_date, kind, reference_no, notes, created_by_user_id
+          )
+          values ($1::uuid, $2::uuid, $3::date, 'purchase_invoice', $4, $5, $6::uuid)
+          returning id
+          `,
+          [
+            header.branchId,
+            warehouseId,
+            header.invoiceDate,
+            referenceNo,
+            `Alım faturası ${header.invoiceNo}${header.vendorName ? ` - ${header.vendorName}` : ''}`,
+            req.user.sub,
+          ],
+        );
+        transactionId = createdTx.rows[0].id;
+      }
+
+      for (const line of lines) {
+        await client.query(
+          `
+          insert into inv_stock_transaction_lines(transaction_id, product_id, quantity, unit_cost)
+          values ($1::uuid, $2::uuid, $3::numeric, $4::numeric)
+          `,
+          [transactionId, line.productId, line.quantity, line.unitCost],
+        );
+      }
+
+      await client.query('commit');
+      res.json({
+        ok: true,
+        transactionId,
+        warehouseId,
+        linesCount: lines.length,
+        referenceNo,
+      });
+    } catch (e) {
+      await client.query('rollback');
+      throw e;
+    } finally {
+      client.release();
+    }
   }),
 );
 
@@ -6406,13 +6665,15 @@ app.post(
 app.post(
   '/cash-reconciliations/:id/attachments',
   authRequired,
+  _upload.single('file'),
   asyncRoute(async (req, res) => {
   const id = req.params.id;
   const kind = (req.body?.kind ?? '').toString().trim();
-  const fileName = (req.body?.fileName ?? '').toString().trim();
-  const mimeType = (req.body?.mimeType ?? 'application/octet-stream').toString().trim();
-  const sizeBytes = Number(req.body?.sizeBytes ?? 0);
-  const storageKey = (req.body?.storageKey ?? '').toString().trim() || null;
+  const file = req.file ?? null;
+  const fileName = (req.body?.fileName ?? file?.originalname ?? '').toString().trim();
+  const mimeType = (req.body?.mimeType ?? file?.mimetype ?? 'application/octet-stream').toString().trim();
+  const sizeBytes = Number(req.body?.sizeBytes ?? file?.size ?? 0);
+  let storageKey = (req.body?.storageKey ?? '').toString().trim() || null;
 
   if (!kind || !fileName || !Number.isFinite(sizeBytes) || sizeBytes < 0) {
     return res.status(400).json({ error: 'INVALID_ATTACHMENT' });
@@ -6430,6 +6691,15 @@ app.post(
   const canEdit =
     isManager || (isOwner && (recon.status === 'draft' || recon.status === 'rejected'));
   if (!canEdit) return res.status(403).json({ error: 'FORBIDDEN' });
+
+  if (file?.buffer?.length) {
+    const safeExt = path.extname(fileName).replace(/[^a-zA-Z0-9.]/g, '').slice(0, 12) || '.bin';
+    const storageDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'uploads', 'reconciliation-attachments');
+    await fs.mkdir(storageDir, { recursive: true });
+    const storedName = `${id}-${crypto.randomUUID()}${safeExt}`;
+    await fs.writeFile(path.join(storageDir, storedName), file.buffer);
+    storageKey = `reconciliation-attachments/${storedName}`;
+  }
 
   const row = await queryOne(
     `
@@ -6672,6 +6942,10 @@ app.use((err, req, res, next) => {
 
   if (err?.code === '42703') {
     return res.status(503).json({ error: 'DB_SCHEMA_OUTDATED', requestId });
+  }
+
+  if (err?.code === 'INTEGRATION_SECRET_REQUIRED') {
+    return res.status(503).json({ error: 'INTEGRATION_SECRET_REQUIRED', requestId });
   }
 
   if (err?.code === 'ECONNREFUSED' || err?.code === 'ETIMEDOUT') {

@@ -42,7 +42,10 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
       children: [
         Row(
           children: [
-            Text('Şube Güncelleme', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Şube Güncelleme',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const Spacer(),
             OutlinedButton(
               onPressed: () => context.go('/'),
@@ -63,7 +66,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                       child: TextField(
                         controller: _codeController,
                         enabled: canEdit,
-                        decoration: const InputDecoration(labelText: 'Kod (POS/entegrasyon)'),
+                        decoration: const InputDecoration(
+                          labelText: 'Kod (POS/entegrasyon)',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -95,12 +100,22 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                             ? () async {
                                 final name = _nameController.text.trim();
                                 final code = _codeController.text.trim();
-                                final startHour = int.tryParse(_businessDayStartHourController.text.trim()) ?? 0;
+                                final startHour =
+                                    int.tryParse(
+                                      _businessDayStartHourController.text
+                                          .trim(),
+                                    ) ??
+                                    0;
                                 if (name.isEmpty) return;
-                                await ref.read(branchesProvider.notifier).addBranch(
+                                await ref
+                                    .read(branchesProvider.notifier)
+                                    .addBranch(
                                       name: name,
                                       code: code.isEmpty ? null : code,
-                                      businessDayStartHour: startHour.clamp(0, 23),
+                                      businessDayStartHour: startHour.clamp(
+                                        0,
+                                        23,
+                                      ),
                                     );
                                 _nameController.clear();
                                 _codeController.clear();
@@ -150,28 +165,40 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                         for (var i = 0; i < items.length; i++)
                           DataRow(
                             color: WidgetStatePropertyAll(
-                              i.isEven ? const Color(0xFFFFFFFF) : const Color(0xFFF4F4F4),
+                              i.isEven
+                                  ? const Color(0xFFFFFFFF)
+                                  : const Color(0xFFF4F4F4),
                             ),
                             cells: [
                               DataCell(
                                 Text(items[i].code ?? ''),
-                                onTap: canEdit ? () => _showEditDialog(context, items[i]) : null,
+                                onTap: canEdit
+                                    ? () => _showEditDialog(context, items[i])
+                                    : null,
                               ),
                               DataCell(Text(items[i].name)),
                               DataCell(
                                 Text(items[i].businessDayStartHour.toString()),
-                                onTap: canEdit ? () => _showEditDialog(context, items[i]) : null,
+                                onTap: canEdit
+                                    ? () => _showEditDialog(context, items[i])
+                                    : null,
                               ),
                               DataCell(
                                 IconButton(
                                   tooltip: () {
-                                    final s = dataSources.where((e) => e.branchId == items[i].id).firstOrNull;
+                                    final s = dataSources
+                                        .where((e) => e.branchId == items[i].id)
+                                        .firstOrNull;
                                     if (s == null) return 'Bağlantı yok';
                                     if (!s.isActive) return 'Pasif';
                                     return '${s.host}:${s.port}/${s.database}';
                                   }(),
                                   icon: Icon(
-                                    dataSources.any((e) => e.branchId == items[i].id && e.isActive)
+                                    dataSources.any(
+                                          (e) =>
+                                              e.branchId == items[i].id &&
+                                              e.isActive,
+                                        )
                                         ? Icons.cloud_done_outlined
                                         : Icons.cloud_off_outlined,
                                   ),
@@ -183,13 +210,15 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                               DataCell(
                                 IconButton(
                                   tooltip: 'Kasalar',
-                                  icon: const Icon(Icons.point_of_sale_outlined),
+                                  icon: const Icon(
+                                    Icons.point_of_sale_outlined,
+                                  ),
                                   onPressed: canEdit
                                       ? () => _showCashRegistersDialog(
-                                            context,
-                                            branch: items[i],
-                                            cashRegisters: cashRegisters,
-                                          )
+                                          context,
+                                          branch: items[i],
+                                          cashRegisters: cashRegisters,
+                                        )
                                       : null,
                                 ),
                               ),
@@ -198,8 +227,8 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                                   value: items[i].isActive,
                                   onChanged: canEdit
                                       ? (_) => ref
-                                          .read(branchesProvider.notifier)
-                                          .toggleActive(items[i].id)
+                                            .read(branchesProvider.notifier)
+                                            .toggleActive(items[i].id)
                                       : null,
                                 ),
                               ),
@@ -219,8 +248,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
   Future<void> _showEditDialog(BuildContext context, Branch item) async {
     final nameController = TextEditingController(text: item.name);
     final codeController = TextEditingController(text: item.code ?? '');
-    final businessDayStartHourController =
-        TextEditingController(text: item.businessDayStartHour.toString());
+    final businessDayStartHourController = TextEditingController(
+      text: item.businessDayStartHour.toString(),
+    );
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -231,7 +261,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
             children: [
               TextField(
                 controller: codeController,
-                decoration: const InputDecoration(labelText: 'Kod (POS/entegrasyon)'),
+                decoration: const InputDecoration(
+                  labelText: 'Kod (POS/entegrasyon)',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -268,7 +300,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
       final startHour =
           int.tryParse(businessDayStartHourController.text.trim()) ?? 0;
       if (name.isNotEmpty) {
-        await ref.read(branchesProvider.notifier).update(
+        await ref
+            .read(branchesProvider.notifier)
+            .update(
               id: item.id,
               name: name,
               code: code,
@@ -282,29 +316,37 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
   }
 
   Future<void> _showDbDialog(BuildContext context, Branch branch) async {
-    final existing =
-        ref.read(branchDataSourcesProvider.notifier).byBranchId(branch.id);
+    final existing = ref
+        .read(branchDataSourcesProvider.notifier)
+        .byBranchId(branch.id);
 
     final hostController = TextEditingController(text: existing?.host ?? '');
-    final portController =
-        TextEditingController(text: (existing?.port ?? 5432).toString());
+    final portController = TextEditingController(
+      text: (existing?.port ?? 5432).toString(),
+    );
     final dbController = TextEditingController(text: existing?.database ?? '');
-    final userController = TextEditingController(text: existing?.username ?? '');
+    final userController = TextEditingController(
+      text: existing?.username ?? '',
+    );
     final passController = TextEditingController();
     var ssl = existing?.ssl ?? false;
     var isActive = existing?.isActive ?? true;
 
     Future<void> test() async {
       await ref.read(branchDataSourcesProvider.notifier).refresh();
-      final now = ref.read(branchDataSourcesProvider.notifier).byBranchId(branch.id);
+      final now = ref
+          .read(branchDataSourcesProvider.notifier)
+          .byBranchId(branch.id);
       if (now == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(this.context).showSnackBar(
-          const SnackBar(content: Text('Önce kaydetmelisiniz.')),
-        );
+        ScaffoldMessenger.of(
+          this.context,
+        ).showSnackBar(const SnackBar(content: Text('Önce kaydetmelisiniz.')));
         return;
       }
-      final ok = await ref.read(branchDataSourcesProvider.notifier).test(branch.id);
+      final ok = await ref
+          .read(branchDataSourcesProvider.notifier)
+          .test(branch.id);
       if (!mounted) return;
       ScaffoldMessenger.of(this.context).showSnackBar(
         SnackBar(content: Text(ok ? 'Bağlantı OK' : 'Bağlantı başarısız')),
@@ -334,14 +376,18 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                           child: TextField(
                             controller: portController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Port'),
+                            decoration: const InputDecoration(
+                              labelText: 'Port',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: dbController,
-                            decoration: const InputDecoration(labelText: 'Database'),
+                            decoration: const InputDecoration(
+                              labelText: 'Database',
+                            ),
                           ),
                         ),
                       ],
@@ -352,7 +398,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                         Expanded(
                           child: TextField(
                             controller: userController,
-                            decoration: const InputDecoration(labelText: 'User'),
+                            decoration: const InputDecoration(
+                              labelText: 'User',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -391,14 +439,19 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                 TextButton(
                   onPressed: () async {
                     try {
-                      final port = int.tryParse(portController.text.trim()) ?? 5432;
-                      await ref.read(branchDataSourcesProvider.notifier).upsert(
+                      final port =
+                          int.tryParse(portController.text.trim()) ?? 5432;
+                      await ref
+                          .read(branchDataSourcesProvider.notifier)
+                          .upsert(
                             branchId: branch.id,
                             host: hostController.text.trim(),
                             port: port,
                             database: dbController.text.trim(),
                             username: userController.text.trim(),
-                            password: passController.text.isEmpty ? null : passController.text,
+                            password: passController.text.isEmpty
+                                ? null
+                                : passController.text,
                             ssl: ssl,
                             isActive: isActive,
                           );
@@ -408,9 +461,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                       );
                     } catch (e) {
                       if (!mounted) return;
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(content: Text('Hata: $e')),
-                      );
+                      ScaffoldMessenger.of(
+                        this.context,
+                      ).showSnackBar(SnackBar(content: Text('Hata: $e')));
                     }
                   },
                   child: const Text('Kaydet'),
@@ -447,10 +500,12 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
     required Branch branch,
     required List<CashRegister> cashRegisters,
   }) async {
-    final assigned = await ref.read(branchCashRegistersProvider(branch.id).future);
-    final selected = <String>{
-      for (final r in assigned) r.id,
-    };
+    final assigned = await ref.read(
+      branchCashRegistersProvider(branch.id).future,
+    );
+    if (!context.mounted) return;
+
+    final selected = <String>{for (final r in assigned) r.id};
 
     await showDialog<void>(
       context: context,
@@ -462,7 +517,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
               content: SizedBox(
                 width: 520,
                 child: cashRegisters.isEmpty
-                    ? const Text('Önce Tanımlar → Kasa bölümünden kasa tanımı yapmalısınız.')
+                    ? const Text(
+                        'Önce Tanımlar → Kasa bölümünden kasa tanımı yapmalısınız.',
+                      )
                     : ListView(
                         shrinkWrap: true,
                         children: [
@@ -490,7 +547,9 @@ class _CrmBranchesPageState extends ConsumerState<CrmBranchesPage> {
                 ),
                 FilledButton(
                   onPressed: () async {
-                    await ref.read(branchCashRegistersActionsProvider).setForBranch(
+                    await ref
+                        .read(branchCashRegistersActionsProvider)
+                        .setForBranch(
                           branchId: branch.id,
                           cashRegisterIds: selected.toList(),
                         );
