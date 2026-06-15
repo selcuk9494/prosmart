@@ -23,6 +23,7 @@ import '../features/crm/crm_unproduced_products_page.dart';
 import '../features/admin/admin_users_page.dart';
 import '../features/admin/admin_user_menu_permissions_page.dart';
 import '../features/account/account_password_page.dart';
+import '../features/accounting/accounting_overview_page.dart';
 import '../features/reports/ana_grup_satis_raporu_page.dart';
 import '../features/inventory/inventory_counts_page.dart';
 import '../features/inventory/inventory_invoices_page.dart';
@@ -115,6 +116,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/operations/branches',
             builder: (context, state) => const BranchOperationsPage(),
+          ),
+          GoRoute(
+            path: '/accounting',
+            builder: (context, state) => const AccountingOverviewPage(),
           ),
           GoRoute(
             path: '/settings',
