@@ -26,6 +26,7 @@ class _MobileDocumentCapturePageState
   DateTime _fromDate = _dayOnly(DateTime.now());
   DateTime _toDate = _dayOnly(DateTime.now());
   String _busyKey = '';
+  bool _didInitialLoad = false;
 
   static DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -34,21 +35,46 @@ class _MobileDocumentCapturePageState
 
   List<DateTime> get _days {
     final out = <DateTime>[];
-    for (var d = _fromDate; !d.isAfter(_toDate); d = d.add(const Duration(days: 1))) {
+    for (
+      var d = _fromDate;
+      !d.isAfter(_toDate);
+      d = d.add(const Duration(days: 1))
+    ) {
       out.add(d);
     }
     return out;
   }
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(_initialLoad);
+  }
+
+  Future<void> _initialLoad() async {
+    if (_didInitialLoad || !AppConfig.hasApi) return;
+    _didInitialLoad = true;
+    await Future.wait([
+      ref.read(branchesProvider.notifier).refresh(),
+      ref.read(reconciliationsProvider.notifier).refresh(),
+    ]);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final session = ref.watch(authControllerProvider).asData?.value;
     final role = session?.role ?? UserRole.branchUser;
-    final branches = ref.watch(branchesProvider).where((b) {
+    final allBranches = ref.watch(branchesProvider).where((b) {
       if (!b.isActive) return false;
-      if (role == UserRole.branchUser) return b.id == session?.branchId;
       return true;
     }).toList();
+    final assignedBranchId = session?.branchId?.trim();
+    final branches =
+        role == UserRole.branchUser &&
+            assignedBranchId != null &&
+            assignedBranchId.isNotEmpty
+        ? allBranches.where((b) => b.id == assignedBranchId).toList()
+        : allBranches;
     final reconciliations = ref.watch(reconciliationsProvider);
     final money = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
 
@@ -58,9 +84,9 @@ class _MobileDocumentCapturePageState
           _MobileDocumentRow(
             day: day,
             branch: branch,
-            reconciliation: reconciliations.where((r) {
-              return r.branchId == branch.id && _sameDay(r.date, day);
-            }).firstOrNull,
+            reconciliation: reconciliations
+                .where((r) => r.branchId == branch.id && _sameDay(r.date, day))
+                .firstOrNull,
           ),
     ];
 
@@ -80,8 +106,39 @@ class _MobileDocumentCapturePageState
             await ref.read(reconciliationsProvider.notifier).refresh();
             await ref.read(branchesProvider.notifier).refresh();
           },
+          branchCount: branches.length,
+          reconciliationCount: reconciliations.length,
         ),
         const SizedBox(height: 12),
+        if (role == UserRole.branchUser &&
+            (assignedBranchId == null || assignedBranchId.isEmpty))
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(14),
+              child: Text(
+                'Bu kullanıcıya bağlı şube bulunamadı; geçici olarak tüm aktif şubeler gösteriliyor.',
+              ),
+            ),
+          ),
+        if (role == UserRole.branchUser &&
+            assignedBranchId != null &&
+            assignedBranchId.isNotEmpty &&
+            branches.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text(
+                'Kullanıcının bağlı olduğu şube aktif şube listesinde bulunamadı. Şube ID: $assignedBranchId',
+              ),
+            ),
+          ),
+        if ((role == UserRole.branchUser &&
+                (assignedBranchId == null || assignedBranchId.isEmpty)) ||
+            (role == UserRole.branchUser &&
+                assignedBranchId != null &&
+                assignedBranchId.isNotEmpty &&
+                branches.isEmpty))
+          const SizedBox(height: 12),
         if (rows.isEmpty)
           const Card(
             child: Padding(
@@ -94,10 +151,15 @@ class _MobileDocumentCapturePageState
             _MobileBranchCard(
               row: row,
               money: money,
-              isBusy: _busyKey.startsWith('${row.branch.id}:${_dateKey(row.day)}'),
-              onUploadEndOfDay: () => _captureAndUpload(row, _MobileDocKind.endOfDay),
-              onUploadCountSlip: () => _captureAndUpload(row, _MobileDocKind.countSlip),
-              onUploadSigned: () => _captureAndUpload(row, _MobileDocKind.signedStatement),
+              isBusy: _busyKey.startsWith(
+                '${row.branch.id}:${_dateKey(row.day)}',
+              ),
+              onUploadEndOfDay: () =>
+                  _captureAndUpload(row, _MobileDocKind.endOfDay),
+              onUploadCountSlip: () =>
+                  _captureAndUpload(row, _MobileDocKind.countSlip),
+              onUploadSigned: () =>
+                  _captureAndUpload(row, _MobileDocKind.signedStatement),
             ),
             const SizedBox(height: 10),
           ],
@@ -124,6 +186,7 @@ class _MobileDocumentCapturePageState
         if (_fromDate.isAfter(_toDate)) _fromDate = _toDate;
       }
     });
+    await ref.read(reconciliationsProvider.notifier).refresh();
   }
 
   Future<CashReconciliation> _ensureReconciliation(
@@ -133,7 +196,9 @@ class _MobileDocumentCapturePageState
     if (existing != null) return existing;
     final session = ref.read(authControllerProvider).asData?.value;
     if (session == null) throw StateError('Oturum bulunamadı');
-    return ref.read(reconciliationsProvider.notifier).createDraft(
+    return ref
+        .read(reconciliationsProvider.notifier)
+        .createDraft(
           branchId: row.branch.id,
           date: row.day,
           userId: session.userId,
@@ -165,12 +230,16 @@ class _MobileDocumentCapturePageState
           ? picked.name
           : '${kind.name}-${_dateKey(row.day)}.jpg';
       final mimeType =
-          picked.mimeType ?? lookupMimeType(fileName, headerBytes: bytes) ?? 'image/jpeg';
+          picked.mimeType ??
+          lookupMimeType(fileName, headerBytes: bytes) ??
+          'image/jpeg';
 
       if (kind == _MobileDocKind.endOfDay) {
         await _uploadEndOfDay(rec.id, fileName, mimeType, bytes);
       } else {
-        await ref.read(reconciliationsProvider.notifier).uploadAttachmentFile(
+        await ref
+            .read(reconciliationsProvider.notifier)
+            .uploadAttachmentFile(
               reconciliationId: rec.id,
               kind: kind == _MobileDocKind.countSlip
                   ? AttachmentKind.countSlip
@@ -184,13 +253,15 @@ class _MobileDocumentCapturePageState
       await ref.read(reconciliationsProvider.notifier).refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${row.branch.name} ${_kindLabel(kind)} yüklendi.')),
+        SnackBar(
+          content: Text('${row.branch.name} ${_kindLabel(kind)} yüklendi.'),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Yükleme başarısız: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Yükleme başarısız: $e')));
     } finally {
       if (mounted) setState(() => _busyKey = '');
     }
@@ -249,10 +320,10 @@ class _MobileDocumentCapturePageState
   String _dateKey(DateTime d) => DateFormat('yyyy-MM-dd', 'tr_TR').format(d);
 
   String _kindLabel(_MobileDocKind kind) => switch (kind) {
-        _MobileDocKind.endOfDay => 'günsonu fişi',
-        _MobileDocKind.countSlip => 'para evrağı',
-        _MobileDocKind.signedStatement => 'imzalı evrak',
-      };
+    _MobileDocKind.endOfDay => 'günsonu fişi',
+    _MobileDocKind.countSlip => 'para evrağı',
+    _MobileDocKind.signedStatement => 'imzalı evrak',
+  };
 }
 
 class _MobileHeader extends StatelessWidget {
@@ -263,6 +334,8 @@ class _MobileHeader extends StatelessWidget {
     required this.onPickTo,
     required this.onToday,
     required this.onRefresh,
+    required this.branchCount,
+    required this.reconciliationCount,
   });
 
   final DateTime fromDate;
@@ -271,6 +344,8 @@ class _MobileHeader extends StatelessWidget {
   final VoidCallback onPickTo;
   final VoidCallback onToday;
   final Future<void> Function() onRefresh;
+  final int branchCount;
+  final int reconciliationCount;
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +394,18 @@ class _MobileHeader extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _MiniMetric(label: 'Şube', value: branchCount.toString()),
+                _MiniMetric(
+                  label: 'İcmal',
+                  value: reconciliationCount.toString(),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -347,12 +434,16 @@ class _MobileBranchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rec = row.reconciliation;
     final date = DateFormat('dd MMM yyyy', 'tr_TR').format(row.day);
-    final canEdit = rec == null ||
+    final canEdit =
+        rec == null ||
         rec.status == ReconciliationStatus.draft ||
         rec.status == ReconciliationStatus.rejected;
-    final hasCountSlip = rec?.attachments.any((a) => a.kind == AttachmentKind.countSlip) ?? false;
+    final hasCountSlip =
+        rec?.attachments.any((a) => a.kind == AttachmentKind.countSlip) ??
+        false;
     final hasSigned =
-        rec?.attachments.any((a) => a.kind == AttachmentKind.signedStatement) ?? false;
+        rec?.attachments.any((a) => a.kind == AttachmentKind.signedStatement) ??
+        false;
 
     return Card(
       child: Padding(
@@ -367,7 +458,10 @@ class _MobileBranchCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(row.branch.name, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        row.branch.name,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 3),
                       Text(date),
                     ],
@@ -381,9 +475,18 @@ class _MobileBranchCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _MiniMetric(label: 'Satış', value: money.format(rec?.expectedSalesTotal ?? 0)),
-                _MiniMetric(label: 'Ödeme', value: money.format(rec?.paymentTotal ?? 0)),
-                _MiniMetric(label: 'Evrak', value: '${rec?.attachmentsCount ?? 0}'),
+                _MiniMetric(
+                  label: 'Satış',
+                  value: money.format(rec?.expectedSalesTotal ?? 0),
+                ),
+                _MiniMetric(
+                  label: 'Ödeme',
+                  value: money.format(rec?.paymentTotal ?? 0),
+                ),
+                _MiniMetric(
+                  label: 'Evrak',
+                  value: '${rec?.attachmentsCount ?? 0}',
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -401,12 +504,20 @@ class _MobileBranchCard extends StatelessWidget {
                   ),
                   FilledButton.tonalIcon(
                     onPressed: canEdit ? onUploadCountSlip : null,
-                    icon: Icon(hasCountSlip ? Icons.check_circle_outline : Icons.payments_outlined),
+                    icon: Icon(
+                      hasCountSlip
+                          ? Icons.check_circle_outline
+                          : Icons.payments_outlined,
+                    ),
                     label: const Text('Para Evrakı'),
                   ),
                   OutlinedButton.icon(
                     onPressed: canEdit ? onUploadSigned : null,
-                    icon: Icon(hasSigned ? Icons.check_circle_outline : Icons.edit_document),
+                    icon: Icon(
+                      hasSigned
+                          ? Icons.check_circle_outline
+                          : Icons.edit_document,
+                    ),
                     label: const Text('İmzalı Evrak'),
                   ),
                 ],
