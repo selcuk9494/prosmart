@@ -20,6 +20,16 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
   String? _selectedBranchId;
   DateTime? _from;
   DateTime? _to;
+  final _invoiceNoFilterController = TextEditingController();
+  final _vendorFilterController = TextEditingController();
+  String _docKind = 'purchase_invoice';
+
+  @override
+  void dispose() {
+    _invoiceNoFilterController.dispose();
+    _vendorFilterController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,15 +47,32 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
     ref
         .read(inventoryInvoicesProvider.notifier)
         .setFilters(branchId: _selectedBranchId, from: _from, to: _to);
-    final items = ref.watch(inventoryInvoicesProvider);
+    final allItems = ref.watch(inventoryInvoicesProvider);
+    final invoiceNoQuery = _invoiceNoFilterController.text.trim().toLowerCase();
+    final vendorQuery = _vendorFilterController.text.trim().toLowerCase();
+    final items = [
+      for (final item in allItems)
+        if ((invoiceNoQuery.isEmpty ||
+                item.invoiceNo.toLowerCase().contains(invoiceNoQuery)) &&
+            (vendorQuery.isEmpty ||
+                (item.vendorName ?? '').toLowerCase().contains(vendorQuery)))
+          item,
+    ];
+    final total = items.fold<double>(0, (sum, item) => sum + (item.total ?? 0));
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          children: [
-            Text('Fatura', style: Theme.of(context).textTheme.titleLarge),
-            const Spacer(),
+        _NbosInvoiceToolbar(
+          title: 'Fatura / İrsaliye',
+          subtitle: 'NBOS belge arama, alış faturası ve stok işleme akışı',
+          actions: [
+            OutlinedButton.icon(
+              onPressed: () =>
+                  ref.read(inventoryInvoicesProvider.notifier).refresh(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Yenile'),
+            ),
             FilledButton.icon(
               onPressed: !canEdit || _selectedBranchId == null
                   ? null
@@ -59,64 +86,140 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
                       }
                     },
               icon: const Icon(Icons.add),
-              label: const Text('Yeni'),
+              label: const Text('Yeni Belge'),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _selectedBranchId,
-          items: [
-            for (final b in branches)
-              DropdownMenuItem(value: b.id, child: Text(b.name)),
-          ],
-          onChanged: role == UserRole.branchUser
-              ? null
-              : (v) => setState(() {
-                  _selectedBranchId = v;
-                }),
-          decoration: const InputDecoration(labelText: 'Şube'),
+        _SectionFrame(
+          title: 'Fatura Arama',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'purchase_invoice',
+                    label: Text('Alış Faturası'),
+                    icon: Icon(Icons.receipt_long_outlined),
+                  ),
+                  ButtonSegment(
+                    value: 'purchase_delivery',
+                    label: Text('Alış İrsaliyesi'),
+                    icon: Icon(Icons.local_shipping_outlined),
+                  ),
+                  ButtonSegment(
+                    value: 'sales_invoice',
+                    label: Text('Satış Faturası'),
+                    icon: Icon(Icons.point_of_sale_outlined),
+                  ),
+                  ButtonSegment(
+                    value: 'return_invoice',
+                    label: Text('İade / Fark'),
+                    icon: Icon(Icons.assignment_return_outlined),
+                  ),
+                ],
+                selected: {_docKind},
+                onSelectionChanged: (value) =>
+                    setState(() => _docKind = value.first),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 260,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedBranchId,
+                      items: [
+                        for (final b in branches)
+                          DropdownMenuItem(value: b.id, child: Text(b.name)),
+                      ],
+                      onChanged: role == UserRole.branchUser
+                          ? null
+                          : (v) => setState(() {
+                              _selectedBranchId = v;
+                            }),
+                      decoration: const InputDecoration(labelText: 'Şube'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 180,
+                    child: _DateBox(
+                      label: 'Başlangıç',
+                      value: _from,
+                      onTap: () async {
+                        final picked = await _pickDate(context, initial: _from);
+                        if (picked == null) return;
+                        setState(() => _from = picked);
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    width: 180,
+                    child: _DateBox(
+                      label: 'Bitiş',
+                      value: _to,
+                      onTap: () async {
+                        final picked = await _pickDate(context, initial: _to);
+                        if (picked == null) return;
+                        setState(() => _to = picked);
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    width: 180,
+                    child: TextField(
+                      controller: _invoiceNoFilterController,
+                      decoration: const InputDecoration(
+                        labelText: 'Belge No',
+                        prefixIcon: Icon(Icons.tag_outlined),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 260,
+                    child: TextField(
+                      controller: _vendorFilterController,
+                      decoration: const InputDecoration(
+                        labelText: 'Firma',
+                        prefixIcon: Icon(Icons.business_outlined),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _clearFilters,
+                    icon: const Icon(Icons.clear),
+                    label: const Text('Temizle'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            Expanded(
-              child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Başlangıç'),
-                child: InkWell(
-                  onTap: () async {
-                    final picked = await _pickDate(context, initial: _from);
-                    if (picked == null) return;
-                    setState(() => _from = picked);
-                  },
-                  child: Text(_from == null ? '' : _fmt(_from!)),
-                ),
-              ),
+            _InvoiceMetric(
+              label: 'Kayıt',
+              value: items.length.toString(),
+              icon: Icons.list_alt_outlined,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Bitiş'),
-                child: InkWell(
-                  onTap: () async {
-                    final picked = await _pickDate(context, initial: _to);
-                    if (picked == null) return;
-                    setState(() => _to = picked);
-                  },
-                  child: Text(_to == null ? '' : _fmt(_to!)),
-                ),
-              ),
+            _InvoiceMetric(
+              label: 'Toplam',
+              value: total.toStringAsFixed(2),
+              icon: Icons.payments_outlined,
             ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 120,
-              child: OutlinedButton(
-                onPressed: () => setState(() {
-                  _from = null;
-                  _to = null;
-                }),
-                child: const Text('Temizle'),
-              ),
+            _InvoiceMetric(
+              label: 'Belge Tipi',
+              value: _docKindLabel(_docKind),
+              icon: Icons.description_outlined,
             ),
           ],
         ),
@@ -125,27 +228,81 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
           const Card(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: Text('Kayıt yok.'),
+              child: Text('Arama kriterlerine uygun belge bulunamadı.'),
             ),
           )
         else
           Card(
-            child: Column(
-              children: [
-                for (final i in items)
-                  ListTile(
-                    title: Text(i.invoiceNo),
-                    subtitle: Text(
-                      '${_fmt(i.invoiceDate)}${i.vendorName == null ? '' : ' • ${i.vendorName}'}',
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStatePropertyAll(
+                  Theme.of(context).colorScheme.primaryContainer,
+                ),
+                columns: const [
+                  DataColumn(label: Text('İşlem')),
+                  DataColumn(label: Text('Belge Tipi')),
+                  DataColumn(label: Text('Belge No')),
+                  DataColumn(label: Text('Tarih')),
+                  DataColumn(label: Text('Firma')),
+                  DataColumn(label: Text('Ödeme Tarihi')),
+                  DataColumn(label: Text('Tutar')),
+                  DataColumn(label: Text('Açıklama')),
+                ],
+                rows: [
+                  for (var index = 0; index < items.length; index++)
+                    DataRow(
+                      color: WidgetStatePropertyAll(
+                        index.isEven
+                            ? const Color(0xFFFFFFFF)
+                            : const Color(0xFFF4F4F4),
+                      ),
+                      cells: [
+                        DataCell(
+                          IconButton(
+                            tooltip: 'Belgeyi aç',
+                            onPressed: () =>
+                                context.go('/inv/invoices/${items[index].id}'),
+                            icon: const Icon(Icons.open_in_new),
+                          ),
+                        ),
+                        DataCell(Text(_docKindLabel(_docKind))),
+                        DataCell(
+                          Text(items[index].invoiceNo),
+                          onTap: () =>
+                              context.go('/inv/invoices/${items[index].id}'),
+                        ),
+                        DataCell(Text(_fmt(items[index].invoiceDate))),
+                        DataCell(Text(items[index].vendorName ?? '')),
+                        DataCell(
+                          Text(
+                            items[index].paymentDate == null
+                                ? ''
+                                : _fmt(items[index].paymentDate!),
+                          ),
+                        ),
+                        DataCell(
+                          Text((items[index].total ?? 0).toStringAsFixed(2)),
+                        ),
+                        DataCell(Text(items[index].notes ?? '')),
+                      ],
                     ),
-                    trailing: Text((i.total ?? 0).toStringAsFixed(2)),
-                    onTap: () => context.go('/inv/invoices/${i.id}'),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
       ],
     );
+  }
+
+  void _clearFilters() {
+    _invoiceNoFilterController.clear();
+    _vendorFilterController.clear();
+    setState(() {
+      _from = null;
+      _to = null;
+      _docKind = 'purchase_invoice';
+    });
   }
 
   Future<String?> _createInvoiceDialog(
@@ -271,6 +428,139 @@ class InventoryInvoiceDetailPage extends ConsumerStatefulWidget {
   @override
   ConsumerState<InventoryInvoiceDetailPage> createState() =>
       _InventoryInvoiceDetailPageState();
+}
+
+class _NbosInvoiceToolbar extends StatelessWidget {
+  const _NbosInvoiceToolbar({
+    required this.title,
+    required this.subtitle,
+    required this.actions,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: scheme.primary, width: 4)),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: scheme.primaryContainer,
+              foregroundColor: scheme.onPrimaryContainer,
+              child: const Icon(Icons.receipt_long_outlined),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 2),
+                  Text(subtitle),
+                ],
+              ),
+            ),
+            Wrap(spacing: 8, runSpacing: 8, children: actions),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DateBox extends StatelessWidget {
+  const _DateBox({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final DateTime? value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: label),
+        child: Text(value == null ? '' : _fmt(value!)),
+      ),
+    );
+  }
+}
+
+class _InvoiceMetric extends StatelessWidget {
+  const _InvoiceMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(icon),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 2),
+                    Text(value, style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionFrame extends StatelessWidget {
+  const _SectionFrame({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          Padding(padding: const EdgeInsets.all(12), child: child),
+        ],
+      ),
+    );
+  }
 }
 
 class _InventoryInvoiceDetailPageState
@@ -1082,6 +1372,15 @@ String _fmt(DateTime d) {
   final mon = d.month.toString().padLeft(2, '0');
   final y = d.year.toString().padLeft(4, '0');
   return '$day.$mon.$y';
+}
+
+String _docKindLabel(String value) {
+  return switch (value) {
+    'purchase_delivery' => 'Alış İrsaliyesi',
+    'sales_invoice' => 'Satış Faturası',
+    'return_invoice' => 'İade / Fark',
+    _ => 'Alış Faturası',
+  };
 }
 
 String _errText(Object e) {

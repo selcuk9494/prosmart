@@ -18,7 +18,7 @@ class AppConfig {
     final v = _apiBaseUrlEnv.trim();
     if (v.isNotEmpty) return v;
     if (kIsWeb) return '';
-    if (kReleaseMode) return 'https://prosmarterp.vercel.app';
+    if (kReleaseMode) return 'https://prosmarterp.vercel.app/api';
     return '';
   }
 
