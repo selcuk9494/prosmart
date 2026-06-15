@@ -76,15 +76,7 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
             FilledButton.icon(
               onPressed: !canEdit || _selectedBranchId == null
                   ? null
-                  : () async {
-                      final createdId = await _createInvoiceDialog(
-                        context,
-                        branchId: _selectedBranchId!,
-                      );
-                      if (createdId != null && context.mounted) {
-                        context.go('/inv/invoices/$createdId');
-                      }
-                    },
+                  : () => context.go('/inv/invoices/new'),
               icon: const Icon(Icons.add),
               label: const Text('Yeni Belge'),
             ),
@@ -304,120 +296,6 @@ class _InventoryInvoicesPageState extends ConsumerState<InventoryInvoicesPage> {
       _docKind = 'purchase_invoice';
     });
   }
-
-  Future<String?> _createInvoiceDialog(
-    BuildContext context, {
-    required String branchId,
-  }) async {
-    final invoiceNoController = TextEditingController();
-    final vendorController = TextEditingController();
-    final notesController = TextEditingController();
-    DateTime invoiceDate = DateTime.now();
-
-    final createdId = await showDialog<String?>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Fatura Ekle'),
-              content: SizedBox(
-                width: 520,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: invoiceNoController,
-                      decoration: const InputDecoration(labelText: 'Fatura No'),
-                      autofocus: true,
-                    ),
-                    const SizedBox(height: 8),
-                    InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Tarih'),
-                      child: InkWell(
-                        onTap: () async {
-                          final picked = await _pickDate(
-                            context,
-                            initial: invoiceDate,
-                          );
-                          if (picked == null) return;
-                          setState(() => invoiceDate = picked);
-                        },
-                        child: Text(_fmt(invoiceDate)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: vendorController,
-                      decoration: const InputDecoration(
-                        labelText: 'Tedarikçi (opsiyonel)',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Not (opsiyonel)',
-                      ),
-                      maxLines: 2,
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('İptal'),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    final no = invoiceNoController.text.trim();
-                    if (no.isEmpty) return;
-                    try {
-                      final id = await ref
-                          .read(inventoryInvoicesProvider.notifier)
-                          .create(
-                            branchId: branchId,
-                            invoiceNo: no,
-                            invoiceDate: invoiceDate,
-                            vendorName: vendorController.text.trim().isEmpty
-                                ? null
-                                : vendorController.text.trim(),
-                            notes: notesController.text.trim().isEmpty
-                                ? null
-                                : notesController.text.trim(),
-                          );
-                      if (id == null) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Kaydedilemedi.')),
-                          );
-                        }
-                        return;
-                      }
-                      if (context.mounted) Navigator.of(context).pop(id);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(_errText(e))));
-                      }
-                    }
-                  },
-                  child: const Text('Kaydet'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    invoiceNoController.dispose();
-    vendorController.dispose();
-    notesController.dispose();
-    return createdId;
-  }
 }
 
 class InventoryInvoiceDetailPage extends ConsumerStatefulWidget {
@@ -428,6 +306,365 @@ class InventoryInvoiceDetailPage extends ConsumerStatefulWidget {
   @override
   ConsumerState<InventoryInvoiceDetailPage> createState() =>
       _InventoryInvoiceDetailPageState();
+}
+
+class InventoryInvoiceCreatePage extends ConsumerStatefulWidget {
+  const InventoryInvoiceCreatePage({super.key});
+
+  @override
+  ConsumerState<InventoryInvoiceCreatePage> createState() =>
+      _InventoryInvoiceCreatePageState();
+}
+
+class _InventoryInvoiceCreatePageState
+    extends ConsumerState<InventoryInvoiceCreatePage> {
+  final _invoiceNoController = TextEditingController();
+  final _vendorController = TextEditingController();
+  final _notesController = TextEditingController();
+  final _discountRateController = TextEditingController();
+  final _discountAmountController = TextEditingController();
+  final _mealVoucherDiscountController = TextEditingController();
+
+  String? _selectedBranchId;
+  DateTime _invoiceDate = DateTime.now();
+  DateTime? _paymentDate;
+  String? _paymentTypeId;
+  String? _incomeCenterId;
+  String _docKind = 'purchase_invoice';
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _invoiceNoController.dispose();
+    _vendorController.dispose();
+    _notesController.dispose();
+    _discountRateController.dispose();
+    _discountAmountController.dispose();
+    _mealVoucherDiscountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = ref.watch(authControllerProvider).asData?.value;
+    final role = session?.role ?? UserRole.branchUser;
+    final canEdit = role == UserRole.manager || role == UserRole.accounting;
+    final branches = ref
+        .watch(branchesProvider)
+        .where((e) => e.isActive)
+        .toList();
+    final paymentTypes = ref
+        .watch(paymentTypesProvider)
+        .where((e) => e.isActive)
+        .toList();
+    final incomeCenters = ref
+        .watch(incomeCentersProvider)
+        .where((e) => e.isActive)
+        .toList();
+
+    _selectedBranchId ??=
+        session?.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _NbosInvoiceToolbar(
+          title: 'Fatura Giriş',
+          subtitle: 'NBOS alış faturası belge başlığı oluşturma ekranı',
+          actions: [
+            OutlinedButton.icon(
+              onPressed: _saving ? null : () => context.go('/inv/invoices'),
+              icon: const Icon(Icons.close),
+              label: const Text('Kapat'),
+            ),
+            FilledButton.icon(
+              onPressed: !canEdit || _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined),
+              label: const Text('Kaydet'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _SectionFrame(
+          title: 'Belge Tipi',
+          child: SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: 'purchase_invoice',
+                label: Text('Alış Faturası'),
+                icon: Icon(Icons.receipt_long_outlined),
+              ),
+              ButtonSegment(
+                value: 'purchase_delivery',
+                label: Text('Alış İrsaliyesi'),
+                icon: Icon(Icons.local_shipping_outlined),
+              ),
+              ButtonSegment(
+                value: 'sales_invoice',
+                label: Text('Satış Faturası'),
+                icon: Icon(Icons.point_of_sale_outlined),
+              ),
+              ButtonSegment(
+                value: 'return_invoice',
+                label: Text('İade / Fark'),
+                icon: Icon(Icons.assignment_return_outlined),
+              ),
+            ],
+            selected: {_docKind},
+            onSelectionChanged: _saving
+                ? null
+                : (value) => setState(() => _docKind = value.first),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _SectionFrame(
+          title: 'Belge Bilgileri',
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 280,
+                child: DropdownButtonFormField<String>(
+                  initialValue: _selectedBranchId,
+                  decoration: const InputDecoration(labelText: 'Şube'),
+                  items: [
+                    for (final b in branches)
+                      DropdownMenuItem(value: b.id, child: Text(b.name)),
+                  ],
+                  onChanged: role == UserRole.branchUser || _saving
+                      ? null
+                      : (value) => setState(() => _selectedBranchId = value),
+                ),
+              ),
+              SizedBox(
+                width: 220,
+                child: TextField(
+                  controller: _invoiceNoController,
+                  enabled: !_saving,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: 'Fatura No'),
+                ),
+              ),
+              SizedBox(
+                width: 220,
+                child: _DateBox(
+                  label: 'Fatura Tarihi',
+                  value: _invoiceDate,
+                  onTap: _saving
+                      ? () {}
+                      : () async {
+                          final picked = await _pickDate(
+                            context,
+                            initial: _invoiceDate,
+                          );
+                          if (picked != null) {
+                            setState(() => _invoiceDate = picked);
+                          }
+                        },
+                ),
+              ),
+              SizedBox(
+                width: 320,
+                child: TextField(
+                  controller: _vendorController,
+                  enabled: !_saving,
+                  decoration: const InputDecoration(labelText: 'Firma'),
+                ),
+              ),
+              SizedBox(
+                width: 280,
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Ödeme Türü'),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      isExpanded: true,
+                      value: _paymentTypeId,
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Seçiniz'),
+                        ),
+                        for (final p in paymentTypes)
+                          DropdownMenuItem(value: p.id, child: Text(p.name)),
+                      ],
+                      onChanged: _saving
+                          ? null
+                          : (value) => setState(() => _paymentTypeId = value),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 280,
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Gelir Merkezi'),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      isExpanded: true,
+                      value: _incomeCenterId,
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Seçiniz'),
+                        ),
+                        for (final g in incomeCenters)
+                          DropdownMenuItem(value: g.id, child: Text(g.name)),
+                      ],
+                      onChanged: _saving
+                          ? null
+                          : (value) => setState(() => _incomeCenterId = value),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 220,
+                child: _DateBox(
+                  label: 'Ödeme Tarihi',
+                  value: _paymentDate,
+                  onTap: _saving
+                      ? () {}
+                      : () async {
+                          final picked = await _pickDate(
+                            context,
+                            initial: _paymentDate,
+                          );
+                          if (picked != null) {
+                            setState(() => _paymentDate = picked);
+                          }
+                        },
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: TextField(
+                  controller: _discountRateController,
+                  enabled: !_saving,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'İndirim (%)'),
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: TextField(
+                  controller: _discountAmountController,
+                  enabled: !_saving,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'İndirim Tutar'),
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: TextField(
+                  controller: _mealVoucherDiscountController,
+                  enabled: !_saving,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Yemek Çeki İndirim',
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 540,
+                child: TextField(
+                  controller: _notesController,
+                  enabled: !_saving,
+                  decoration: const InputDecoration(labelText: 'Açıklama'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _SectionFrame(
+          title: 'Satır Girişi',
+          child: const Text(
+            'Belge başlığını kaydettikten sonra stok kalemleri belge kartında girilecek.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    final branchId = _selectedBranchId;
+    final invoiceNo = _invoiceNoController.text.trim();
+    if (branchId == null || branchId.isEmpty) {
+      _showMessage('Şube seçimi gerekli.');
+      return;
+    }
+    if (invoiceNo.isEmpty) {
+      _showMessage('Fatura No gerekli.');
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final createdId = await ref
+          .read(inventoryInvoicesProvider.notifier)
+          .create(
+            branchId: branchId,
+            invoiceNo: invoiceNo,
+            invoiceDate: _invoiceDate,
+            vendorName: _vendorController.text.trim().isEmpty
+                ? null
+                : _vendorController.text.trim(),
+            notes: _notesController.text.trim().isEmpty
+                ? null
+                : '${_docKindLabel(_docKind)} • ${_notesController.text.trim()}',
+          );
+      if (createdId == null) {
+        _showMessage('Fatura oluşturulamadı.');
+        return;
+      }
+
+      await ref
+          .read(inventoryInvoiceActionsProvider)
+          .updateHeader(
+            createdId,
+            paymentTypeId: _paymentTypeId ?? '',
+            incomeCenterId: _incomeCenterId ?? '',
+            discountRate: _parseDouble(_discountRateController.text),
+            discountAmount: _parseDouble(_discountAmountController.text),
+            mealVoucherDiscount: _parseDouble(
+              _mealVoucherDiscountController.text,
+            ),
+            paymentDate: _paymentDate,
+          );
+
+      if (!mounted) return;
+      context.go('/inv/invoices/$createdId');
+    } catch (e) {
+      if (mounted) _showMessage(_errText(e));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  double? _parseDouble(String value) {
+    final raw = value.trim();
+    if (raw.isEmpty) return null;
+    return double.tryParse(raw.replaceAll(',', '.'));
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 class _NbosInvoiceToolbar extends StatelessWidget {

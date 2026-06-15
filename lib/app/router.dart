@@ -130,6 +130,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const InventoryInvoicesPage(),
             routes: [
               GoRoute(
+                path: 'new',
+                builder: (context, state) => const InventoryInvoiceCreatePage(),
+              ),
+              GoRoute(
                 path: ':id',
                 builder: (context, state) => InventoryInvoiceDetailPage(
                   invoiceId: state.pathParameters['id']!,
