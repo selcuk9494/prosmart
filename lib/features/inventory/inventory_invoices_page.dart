@@ -316,6 +316,28 @@ class InventoryInvoiceCreatePage extends ConsumerStatefulWidget {
       _InventoryInvoiceCreatePageState();
 }
 
+class _DraftInvoiceLine {
+  const _DraftInvoiceLine({
+    required this.description,
+    required this.unit,
+    required this.quantity,
+    required this.unitPrice,
+    this.productId,
+    this.productCode,
+    this.productName,
+  });
+
+  final String description;
+  final String unit;
+  final double quantity;
+  final double unitPrice;
+  final String? productId;
+  final String? productCode;
+  final String? productName;
+
+  double get lineTotal => quantity * unitPrice;
+}
+
 class _InventoryInvoiceCreatePageState
     extends ConsumerState<InventoryInvoiceCreatePage> {
   final _invoiceNoController = TextEditingController();
@@ -324,6 +346,11 @@ class _InventoryInvoiceCreatePageState
   final _discountRateController = TextEditingController();
   final _discountAmountController = TextEditingController();
   final _mealVoucherDiscountController = TextEditingController();
+  final _productQueryController = TextEditingController();
+  final _lineDescriptionController = TextEditingController();
+  final _lineUnitController = TextEditingController();
+  final _lineQtyController = TextEditingController(text: '1');
+  final _lineUnitPriceController = TextEditingController(text: '0');
 
   String? _selectedBranchId;
   DateTime _invoiceDate = DateTime.now();
@@ -331,7 +358,19 @@ class _InventoryInvoiceCreatePageState
   String? _paymentTypeId;
   String? _incomeCenterId;
   String _docKind = 'purchase_invoice';
+  InventoryProduct? _selectedProduct;
+  final List<_DraftInvoiceLine> _lines = [];
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _productQueryController.addListener(() {
+      ref
+          .read(inventoryProductsProvider.notifier)
+          .setQuery(_productQueryController.text.trim());
+    });
+  }
 
   @override
   void dispose() {
@@ -341,6 +380,11 @@ class _InventoryInvoiceCreatePageState
     _discountRateController.dispose();
     _discountAmountController.dispose();
     _mealVoucherDiscountController.dispose();
+    _productQueryController.dispose();
+    _lineDescriptionController.dispose();
+    _lineUnitController.dispose();
+    _lineQtyController.dispose();
+    _lineUnitPriceController.dispose();
     super.dispose();
   }
 
@@ -361,6 +405,19 @@ class _InventoryInvoiceCreatePageState
         .watch(incomeCentersProvider)
         .where((e) => e.isActive)
         .toList();
+    final products = ref
+        .watch(inventoryProductsProvider)
+        .where((e) => e.isActive)
+        .take(60)
+        .toList();
+    final lineTotal = _lines.fold<double>(
+      0,
+      (sum, line) => sum + line.lineTotal,
+    );
+    final discountTotal =
+        (_parseDouble(_discountAmountController.text) ?? 0) +
+        (_parseDouble(_mealVoucherDiscountController.text) ?? 0);
+    final netTotal = lineTotal - discountTotal;
 
     _selectedBranchId ??=
         session?.branchId ?? (branches.isNotEmpty ? branches.first.id : null);
@@ -370,7 +427,7 @@ class _InventoryInvoiceCreatePageState
       children: [
         _NbosInvoiceToolbar(
           title: 'Fatura Giriş',
-          subtitle: 'NBOS alış faturası belge başlığı oluşturma ekranı',
+          subtitle: 'Başlık, satırlar ve toplamlar tek ekrandan kaydedilir',
           actions: [
             OutlinedButton.icon(
               onPressed: _saving ? null : () => context.go('/inv/invoices'),
@@ -387,6 +444,28 @@ class _InventoryInvoiceCreatePageState
                     )
                   : const Icon(Icons.save_outlined),
               label: const Text('Kaydet'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _InvoiceMetric(
+              label: 'Satır',
+              value: _lines.length.toString(),
+              icon: Icons.format_list_numbered_outlined,
+            ),
+            _InvoiceMetric(
+              label: 'Brüt Toplam',
+              value: _money(lineTotal),
+              icon: Icons.receipt_long_outlined,
+            ),
+            _InvoiceMetric(
+              label: 'Net Toplam',
+              value: _money(netTotal < 0 ? 0 : netTotal),
+              icon: Icons.payments_outlined,
             ),
           ],
         ),
@@ -562,6 +641,7 @@ class _InventoryInvoiceCreatePageState
                     decimal: true,
                   ),
                   decoration: const InputDecoration(labelText: 'İndirim Tutar'),
+                  onChanged: (_) => setState(() {}),
                 ),
               ),
               SizedBox(
@@ -575,6 +655,7 @@ class _InventoryInvoiceCreatePageState
                   decoration: const InputDecoration(
                     labelText: 'Yemek Çeki İndirim',
                   ),
+                  onChanged: (_) => setState(() {}),
                 ),
               ),
               SizedBox(
@@ -591,12 +672,229 @@ class _InventoryInvoiceCreatePageState
         const SizedBox(height: 12),
         _SectionFrame(
           title: 'Satır Girişi',
-          child: const Text(
-            'Belge başlığını kaydettikten sonra stok kalemleri belge kartında girilecek.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 240,
+                    child: TextField(
+                      controller: _productQueryController,
+                      enabled: !_saving,
+                      decoration: const InputDecoration(
+                        labelText: 'Ürün Ara',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 360,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: 'Ürün'),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          isExpanded: true,
+                          value:
+                              _selectedProduct != null &&
+                                  products.any(
+                                    (p) => p.id == _selectedProduct!.id,
+                                  )
+                              ? _selectedProduct!.id
+                              : null,
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Serbest satır'),
+                            ),
+                            for (final p in products)
+                              DropdownMenuItem<String?>(
+                                value: p.id,
+                                child: Text('${p.code ?? ''} ${p.name}'.trim()),
+                              ),
+                          ],
+                          onChanged: _saving
+                              ? null
+                              : (id) {
+                                  setState(() {
+                                    _selectedProduct = id == null
+                                        ? null
+                                        : products.firstWhere(
+                                            (p) => p.id == id,
+                                          );
+                                    if (_selectedProduct != null) {
+                                      _lineDescriptionController.text =
+                                          _selectedProduct!.name;
+                                      _lineUnitController.text =
+                                          _selectedProduct!.unit;
+                                    }
+                                  });
+                                },
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 300,
+                    child: TextField(
+                      controller: _lineDescriptionController,
+                      enabled: !_saving,
+                      decoration: const InputDecoration(labelText: 'Açıklama'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 110,
+                    child: TextField(
+                      controller: _lineUnitController,
+                      enabled: !_saving,
+                      decoration: const InputDecoration(labelText: 'Birim'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 120,
+                    child: TextField(
+                      controller: _lineQtyController,
+                      enabled: !_saving,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(labelText: 'Miktar'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 140,
+                    child: TextField(
+                      controller: _lineUnitPriceController,
+                      enabled: !_saving,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Birim Fiyat',
+                      ),
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _saving ? null : _addDraftLine,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Satır Ekle'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (_lines.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text('Henüz satır eklenmedi.'),
+                )
+              else
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStatePropertyAll(
+                      Theme.of(context).colorScheme.primaryContainer,
+                    ),
+                    columns: const [
+                      DataColumn(label: Text('Kod')),
+                      DataColumn(label: Text('Ürün / Açıklama')),
+                      DataColumn(label: Text('Birim')),
+                      DataColumn(label: Text('Miktar')),
+                      DataColumn(label: Text('Birim Fiyat')),
+                      DataColumn(label: Text('Tutar')),
+                      DataColumn(label: Text('')),
+                    ],
+                    rows: [
+                      for (var i = 0; i < _lines.length; i++)
+                        DataRow(
+                          color: WidgetStatePropertyAll(
+                            i.isEven
+                                ? const Color(0xFFFFFFFF)
+                                : const Color(0xFFF4F4F4),
+                          ),
+                          cells: [
+                            DataCell(Text(_lines[i].productCode ?? '')),
+                            DataCell(
+                              Text(
+                                _lines[i].productName ?? _lines[i].description,
+                              ),
+                            ),
+                            DataCell(Text(_lines[i].unit)),
+                            DataCell(
+                              Text(_lines[i].quantity.toStringAsFixed(2)),
+                            ),
+                            DataCell(Text(_money(_lines[i].unitPrice))),
+                            DataCell(Text(_money(_lines[i].lineTotal))),
+                            DataCell(
+                              IconButton(
+                                tooltip: 'Satırı sil',
+                                onPressed: _saving
+                                    ? null
+                                    : () => setState(() => _lines.removeAt(i)),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Toplam: ${_money(lineTotal)}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
+  }
+
+  void _addDraftLine() {
+    final description = _lineDescriptionController.text.trim();
+    final unit = _lineUnitController.text.trim().isEmpty
+        ? (_selectedProduct?.unit ?? 'adet')
+        : _lineUnitController.text.trim();
+    final quantity = _parseDouble(_lineQtyController.text);
+    final unitPrice = _parseDouble(_lineUnitPriceController.text);
+
+    if (description.isEmpty) {
+      _showMessage('Satır açıklaması gerekli.');
+      return;
+    }
+    if (quantity == null || quantity == 0) {
+      _showMessage('Miktar gerekli.');
+      return;
+    }
+    if (unitPrice == null) {
+      _showMessage('Birim fiyat gerekli.');
+      return;
+    }
+
+    setState(() {
+      _lines.add(
+        _DraftInvoiceLine(
+          productId: _selectedProduct?.id,
+          productCode: _selectedProduct?.code,
+          productName: _selectedProduct?.name,
+          description: description,
+          unit: unit,
+          quantity: quantity,
+          unitPrice: unitPrice,
+        ),
+      );
+      _selectedProduct = null;
+      _lineDescriptionController.clear();
+      _lineUnitController.clear();
+      _lineQtyController.text = '1';
+      _lineUnitPriceController.text = '0';
+    });
   }
 
   Future<void> _save() async {
@@ -610,9 +908,14 @@ class _InventoryInvoiceCreatePageState
       _showMessage('Fatura No gerekli.');
       return;
     }
+    if (_lines.isEmpty) {
+      _showMessage('En az bir fatura satırı ekleyin.');
+      return;
+    }
 
     setState(() => _saving = true);
     try {
+      final notesText = _notesController.text.trim();
       final createdId = await ref
           .read(inventoryInvoicesProvider.notifier)
           .create(
@@ -622,28 +925,32 @@ class _InventoryInvoiceCreatePageState
             vendorName: _vendorController.text.trim().isEmpty
                 ? null
                 : _vendorController.text.trim(),
-            notes: _notesController.text.trim().isEmpty
-                ? null
-                : '${_docKindLabel(_docKind)} • ${_notesController.text.trim()}',
-          );
-      if (createdId == null) {
-        _showMessage('Fatura oluşturulamadı.');
-        return;
-      }
-
-      await ref
-          .read(inventoryInvoiceActionsProvider)
-          .updateHeader(
-            createdId,
-            paymentTypeId: _paymentTypeId ?? '',
-            incomeCenterId: _incomeCenterId ?? '',
+            notes: notesText.isEmpty
+                ? _docKindLabel(_docKind)
+                : '${_docKindLabel(_docKind)} • $notesText',
+            paymentTypeId: _paymentTypeId,
+            incomeCenterId: _incomeCenterId,
             discountRate: _parseDouble(_discountRateController.text),
             discountAmount: _parseDouble(_discountAmountController.text),
             mealVoucherDiscount: _parseDouble(
               _mealVoucherDiscountController.text,
             ),
             paymentDate: _paymentDate,
+            lines: [
+              for (final line in _lines)
+                (
+                  description: line.description,
+                  quantity: line.quantity,
+                  unitPrice: line.unitPrice,
+                  productId: line.productId,
+                  unit: line.unit,
+                ),
+            ],
           );
+      if (createdId == null) {
+        _showMessage('Fatura oluşturulamadı.');
+        return;
+      }
 
       if (!mounted) return;
       context.go('/inv/invoices/$createdId');
@@ -1623,6 +1930,8 @@ String _fmt(DateTime d) {
   final y = d.year.toString().padLeft(4, '0');
   return '$day.$mon.$y';
 }
+
+String _money(double value) => value.toStringAsFixed(2);
 
 String _docKindLabel(String value) {
   return switch (value) {

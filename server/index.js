@@ -3671,58 +3671,109 @@ app.post(
     const discountAmount = toMoney(req.body?.discountAmount);
     const mealVoucherDiscount = toMoney(req.body?.mealVoucherDiscount);
     const paymentDate = asDateString((req.body?.paymentDate ?? '').toString());
+    const linesRaw = Array.isArray(req.body?.lines) ? req.body.lines : [];
 
     if (!branchId) return res.status(400).json({ error: 'BRANCH_REQUIRED' });
     if (!invoiceNo) return res.status(400).json({ error: 'NO_REQUIRED' });
     if (!invoiceDate) return res.status(400).json({ error: 'DATE_REQUIRED' });
     if (!canAccessBranch(req, branchId)) return res.status(403).json({ error: 'FORBIDDEN' });
 
-    const row = await queryOne(
-      `
-      insert into inv_invoices(
-        branch_id,
-        invoice_no,
-        invoice_date,
-        vendor_name,
-        notes,
-        payment_type_id,
-        income_center_id,
-        discount_rate,
-        discount_amount,
-        meal_voucher_discount,
-        payment_date,
-        created_by_user_id
-      )
-      values ($1::uuid, $2, $3::date, $4, $5, $6::uuid, $7::uuid, $8, $9, $10, $11::date, $12::uuid)
-      on conflict (branch_id, invoice_no) do update set
-        invoice_date = excluded.invoice_date,
-        vendor_name = excluded.vendor_name,
-        notes = excluded.notes,
-        payment_type_id = excluded.payment_type_id,
-        income_center_id = excluded.income_center_id,
-        discount_rate = excluded.discount_rate,
-        discount_amount = excluded.discount_amount,
-        meal_voucher_discount = excluded.meal_voucher_discount,
-        payment_date = excluded.payment_date,
-        updated_at = now()
-      returning id
-      `,
-      [
-        branchId,
-        invoiceNo,
-        invoiceDate,
-        vendorName,
-        notes,
-        paymentTypeId,
-        incomeCenterId,
-        discountRate,
-        discountAmount,
-        mealVoucherDiscount,
-        paymentDate || null,
-        req.user.sub,
-      ],
-    );
-    res.json({ id: row.id });
+    const lines = [];
+    for (const raw of linesRaw) {
+      const productId = (raw?.productId ?? '').toString().trim() || null;
+      let description = (raw?.description ?? '').toString().trim();
+      let unit = (raw?.unit ?? '').toString().trim() || null;
+      const quantity = toQty(raw?.quantity);
+      const unitPrice = toMoney(raw?.unitPrice);
+
+      if (productId) {
+        const product = await queryOne(
+          `select id, name, unit from inv_products where id=$1::uuid limit 1`,
+          [productId],
+        );
+        if (!product) return res.status(404).json({ error: 'PRODUCT_NOT_FOUND' });
+        if (!description) description = product.name;
+        if (!unit) unit = product.unit;
+      }
+
+      if (!description) return res.status(400).json({ error: 'LINE_DESC_REQUIRED' });
+      if (quantity == null) return res.status(400).json({ error: 'LINE_QTY_REQUIRED' });
+      if (unitPrice == null) return res.status(400).json({ error: 'LINE_PRICE_REQUIRED' });
+
+      lines.push({ productId, description, unit, quantity, unitPrice });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      const rowResult = await client.query(
+        `
+        insert into inv_invoices(
+          branch_id,
+          invoice_no,
+          invoice_date,
+          vendor_name,
+          notes,
+          payment_type_id,
+          income_center_id,
+          discount_rate,
+          discount_amount,
+          meal_voucher_discount,
+          payment_date,
+          created_by_user_id
+        )
+        values ($1::uuid, $2, $3::date, $4, $5, $6::uuid, $7::uuid, $8, $9, $10, $11::date, $12::uuid)
+        on conflict (branch_id, invoice_no) do update set
+          invoice_date = excluded.invoice_date,
+          vendor_name = excluded.vendor_name,
+          notes = excluded.notes,
+          payment_type_id = excluded.payment_type_id,
+          income_center_id = excluded.income_center_id,
+          discount_rate = excluded.discount_rate,
+          discount_amount = excluded.discount_amount,
+          meal_voucher_discount = excluded.meal_voucher_discount,
+          payment_date = excluded.payment_date,
+          updated_at = now()
+        returning id
+        `,
+        [
+          branchId,
+          invoiceNo,
+          invoiceDate,
+          vendorName,
+          notes,
+          paymentTypeId,
+          incomeCenterId,
+          discountRate,
+          discountAmount,
+          mealVoucherDiscount,
+          paymentDate || null,
+          req.user.sub,
+        ],
+      );
+      const invoiceId = rowResult.rows[0].id;
+
+      if (linesRaw.length > 0) {
+        await client.query(`delete from inv_invoice_lines where invoice_id = $1::uuid`, [invoiceId]);
+        for (const line of lines) {
+          await client.query(
+            `
+            insert into inv_invoice_lines(invoice_id, product_id, description, unit, quantity, unit_price)
+            values ($1::uuid, $2::uuid, $3, $4, $5, $6)
+            `,
+            [invoiceId, line.productId, line.description, line.unit, line.quantity, line.unitPrice],
+          );
+        }
+      }
+
+      await client.query('commit');
+      res.json({ id: invoiceId });
+    } catch (e) {
+      await client.query('rollback');
+      throw e;
+    } finally {
+      client.release();
+    }
   }),
 );
 

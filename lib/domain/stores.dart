@@ -1347,6 +1347,23 @@ class InventoryInvoicesStore extends Notifier<List<InventoryInvoice>> {
     required DateTime invoiceDate,
     String? vendorName,
     String? notes,
+    String? paymentTypeId,
+    String? incomeCenterId,
+    double? discountRate,
+    double? discountAmount,
+    double? mealVoucherDiscount,
+    DateTime? paymentDate,
+    List<
+          ({
+            String description,
+            double quantity,
+            double unitPrice,
+            String? productId,
+            String? unit,
+          })
+        >
+        lines =
+        const [],
   }) async {
     if (!AppConfig.hasApi) return null;
     final dio = ref.read(dioProvider);
@@ -1359,6 +1376,28 @@ class InventoryInvoicesStore extends Notifier<List<InventoryInvoice>> {
         if (vendorName?.trim().isNotEmpty ?? false)
           'vendorName': vendorName!.trim(),
         if (notes?.trim().isNotEmpty ?? false) 'notes': notes!.trim(),
+        if (paymentTypeId?.trim().isNotEmpty ?? false)
+          'paymentTypeId': paymentTypeId!.trim(),
+        if (incomeCenterId?.trim().isNotEmpty ?? false)
+          'incomeCenterId': incomeCenterId!.trim(),
+        'discountRate': ?discountRate,
+        'discountAmount': ?discountAmount,
+        'mealVoucherDiscount': ?mealVoucherDiscount,
+        if (paymentDate != null)
+          'paymentDate': paymentDate.toIso8601String().substring(0, 10),
+        if (lines.isNotEmpty)
+          'lines': [
+            for (final line in lines)
+              {
+                'description': line.description,
+                'quantity': line.quantity,
+                'unitPrice': line.unitPrice,
+                if (line.productId?.trim().isNotEmpty ?? false)
+                  'productId': line.productId!.trim(),
+                if (line.unit?.trim().isNotEmpty ?? false)
+                  'unit': line.unit!.trim(),
+              },
+          ],
       },
     );
     await refresh();
